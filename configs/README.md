@@ -45,6 +45,7 @@
 - `train/sft_track3_scale_lr1e5_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 Phase 2 对齐学习率配置（四类物理场景、`lr=1e-5`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁）。
 - `train/sft_track3_scale_phys_only_lr3e6_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 纯物理退化三场景配置（仅 `[noise, reverb, far_field]`、`lr=3e-6`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁，验证剔除 `clean` 稀释后对远场与混响的提升）。
 - `train/sft_track3_scale_all5_lr3e6_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 温和五场景对照消融（含 `dropout`、`lr=3e-6`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁）。
+- `train/sft_track3_scale_phys_lr2e6_ga32.yaml`：Phase 6 Track 3 SFT `scale` Wave 2B 高声学多样性低漂移配置（纯物理退化三场景 `[noise, reverb, far_field]`、`ga=32` 每 10 步覆盖 320 条实测房间样本、`lr=2e-6` 超温和保标点、`warmup=3`、`max_steps=40`）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
