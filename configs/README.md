@@ -56,6 +56,7 @@
 - `train/sft_track3b_punct_all4_lr5e5_ga32_320.yaml`：Phase 6 Track 3B 保标点全 epoch 级四场景均衡配置（`target_text_field: text_punct`，四物理场景 `[clean, noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=5e-5`、`ga=32`、`max_steps=320` 覆盖 10,240 条样本、每 80 步全量 val 门禁）。
 - `train/sft_track3b_punct_phys_lr1e4_ga32.yaml`：Phase 6 Track 3B 保标点大批量高学习率上界探索配置（`target_text_field: text_punct`，纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=1e-4`、`ga=32`、`max_steps=160` 覆盖 5,120 条样本、每 40 步全量 val 门禁）。
 - `train/sft_track3b_punct_all4_r32_lr1e4_ga32_320.yaml`：Phase 6 Track 3B 保标点全 epoch 级高秩高学习率四场景配置（`target_text_field: text_punct`，四物理场景 `[clean, noise, reverb, far_field]`、`rank=32`/`alpha=64`、`lr=1e-4`、`ga=32`、`max_steps=320` 覆盖 10,240 条样本、每 80 步全量 val 门禁）。
+- `train/sft_track3b_punct_phys_lr2e5_ga32_320.yaml`：Phase 6 Track 3B 保标点低方差大批量全 epoch 级甜蜜点配置（`target_text_field: text_punct`，纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=2e-5`、`ga=32`、`max_steps=320` 覆盖 10,240 条退化样本、每 80 步全量 val 门禁）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
