@@ -33,6 +33,13 @@
 - `train/rl_pilot_aligned.yaml`：Phase 4 对齐版 RL pilot 配置，schema `qwen3-asr-train-v1`，`stage: rl`，`profile: pilot`。开启 `rl.train_scenarios: [noise, reverb, far_field]`、组内无标点等长替换对齐与差异 token 梯度掩码（`rl.loss_token_scope: mismatched_only`、`rl.max_edit_count: 2`）、仅非零信号 group 计入累积窗口（`rl.accumulate_signal_groups_only: true`、`gradient_accumulation_steps: 4`）、`rl.dropout_anchor_weight: 0.05`（以冻结 DPO step 40 贪心预测为教师锚定 train `dropout`），以及阻尼优化器与日程（`learning_rate: 1e-6`、`warmup_steps: 5`、`scheduler_max_steps: 50`、`max_steps: 20`、`save_steps: 5`、`eval_steps: 5`、`kl_beta: 0.10`、`min_reward_improvement: 0.00002`）。父 release 为 `dpo_06b_zh_20261022T133007_step000040`。已执行的 run `20261023T042034_rl_06b_zh_seed42` 在 step 5 一次性通过全部门禁（`selected_step = 5`），并封包发布为 `rl_06b_zh_20261023T042034_step000005`。`publishable` 保持 false。
 - `train/aishell_val_rl_step5_20261023.json`：Phase 4 RL 选出 release（`rl_06b_zh_20261023T042034_step000005`，step 5）在 2500 条固定 `val` 上的固化指标，schema `qwen3-asr-parent-metrics-v1`（总计 micro CER `0.06275259421081376`）。
 - `train/sft_track3_smoke.yaml`：Phase 6 Track 3 SLR28 物理增强 6-step SFT 中断恢复 smoke 配置（同时锁定 Nov-2026 `requirements.track3.lock` 哈希与 `jieba==0.42.1` WER 评分，供 Base 分片评测与 SFT smoke 共用，不可发布）。
+- `train/aishell_slr28_val_base_20261124.json`：Phase 6 Track 3 OpenSLR 28 物理增强 2500 条 `val.jsonl`（SHA-256 `c768edcefbbb377670b7263df9bf2c0250126ba63370632dc31cd27b4b862383`）的官方 Base 基线指标，schema `qwen3-asr-baseline-v1`（`predictions_sha256=6c5a383c6150f28660d382c0fc5aae8ada58643933c8a30579e5323fe607e1ab`，总体 `micro_cer=6.4091%` / `micro_wer=9.9879%`，`far_field=4.7788%` 为 Phase 1 合成数据的 `2.01×`）。
+- `train/sft_track3_scale_lr2e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 主配置（仅四类物理声学场景 `[clean, noise, reverb, far_field]`、`lr=2e-5`、`ga=16`、`rank=16`、`max_steps=120`、每 30 步全量 2500 条 val 门禁与锁定 WER 评测）。
+- `train/sft_track3_scale_lr1e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 低学习率对照配置（四类物理场景、`lr=1e-5`、`ga=16`、`rank=16`、`max_steps=120`）。
+- `train/sft_track3_scale_lr3e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 高学习率探索配置（四类物理场景、`lr=3e-5`、`ga=16`、`rank=16`、`max_steps=120`）。
+- `train/sft_track3_scale_r32_lr2e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 高秩容量配置（四类物理场景、`rank=32`/`alpha=64`、`lr=2e-5`、`ga=16`、`max_steps=120`）。
+- `train/sft_track3_scale_all5_lr2e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 五场景对照消融（包含 `dropout`，`lr=2e-5`、`ga=16`、`rank=16`、`max_steps=120`），验证排除 `dropout` 对防止静音幻觉与提升真实远场的作用。
+- `train/sft_track3_scale_lr15e6_ga16_160.yaml`：Phase 6 Track 3 SFT `scale` 长步数配置（四类物理场景、`lr=1.5e-5`、`ga=16`、`rank=16`、`max_steps=160`、每 40 步评测，覆盖 2560 条物理样本）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
