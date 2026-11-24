@@ -40,6 +40,8 @@
 - `train/sft_track3_scale_r32_lr2e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 高秩容量配置（四类物理场景、`rank=32`/`alpha=64`、`lr=2e-5`、`ga=16`、`max_steps=120`）。
 - `train/sft_track3_scale_all5_lr2e5_ga16.yaml`：Phase 6 Track 3 SFT `scale` 五场景对照消融（包含 `dropout`，`lr=2e-5`、`ga=16`、`rank=16`、`max_steps=120`），验证排除 `dropout` 对防止静音幻觉与提升真实远场的作用。
 - `train/sft_track3_scale_lr15e6_ga16_160.yaml`：Phase 6 Track 3 SFT `scale` 长步数配置（四类物理场景、`lr=1.5e-5`、`ga=16`、`rank=16`、`max_steps=160`、每 40 步评测，覆盖 2560 条物理样本）。
+- `train/sft_track3_scale_lr5e6_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 温和学习率配置（四类物理场景、`lr=5e-6`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁，避免过快抹除 Qwen3-ASR 预训练中文标点先验）。
+- `train/sft_track3_scale_lr3e6_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 超温和保标点配置（四类物理场景、`lr=3e-6`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
