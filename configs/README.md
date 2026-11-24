@@ -63,6 +63,8 @@
 - `train/sft_track3b_punct_phys_r32_lr2e5_ga32_320.yaml`：Phase 6 Track 3B 甜蜜点孪生 B 高秩配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=32`/`alpha=64`、`lr=2e-5`、`ga=32`、`max_steps=320` 覆盖 10,240 条退化样本、每 80 步全量 val 门禁）。
 - `train/sft_track3b_punct_phys_lr15e6_ga32_320.yaml`：Phase 6 Track 3B 甜蜜点超低方差近邻配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=1.5e-5`、`ga=32`、`max_steps=320` 覆盖 10,240 条退化样本、每 80 步全量 val 门禁）。
 - `train/sft_track3b_punct_all4_r32_lr2e5_ga32_320.yaml`：Phase 6 Track 3B 甜蜜点 2x2 网格补齐配置（四物理场景 `[clean, noise, reverb, far_field]`、`rank=32`/`alpha=64`、`lr=2e-5`、`ga=32`、`max_steps=320` 覆盖 10,240 条样本、每 80 步全量 val 门禁）。
+- `train/sft_track3b_punct_phys_lr15e6_ga32_160.yaml`：Phase 6 Track 3B 超低方差 160 步余弦收官配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=1.5e-5`、`ga=32`、`max_steps=160` 覆盖 5,120 条退化样本、每 80 步全量 val 门禁）。
+- `train/sft_track3b_punct_phys_lr1e5_ga32_160.yaml`：Phase 6 Track 3B 低学习率下界 160 步余弦收官配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=1.0e-5`、`ga=32`、`max_steps=160` 覆盖 5,120 条退化样本、每 80 步全量 val 门禁）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
