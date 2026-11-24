@@ -46,6 +46,12 @@
 - `train/sft_track3_scale_phys_only_lr3e6_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 纯物理退化三场景配置（仅 `[noise, reverb, far_field]`、`lr=3e-6`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁，验证剔除 `clean` 稀释后对远场与混响的提升）。
 - `train/sft_track3_scale_all5_lr3e6_ga8.yaml`：Phase 6 Track 3 SFT `scale` Wave 2 温和五场景对照消融（含 `dropout`、`lr=3e-6`、`ga=8`、`warmup=5`、`max_steps=60`、每 10 步全量 2500 条 val 门禁）。
 - `train/sft_track3_scale_phys_lr2e6_ga32.yaml`：Phase 6 Track 3 SFT `scale` Wave 2B 高声学多样性低漂移配置（纯物理退化三场景 `[noise, reverb, far_field]`、`ga=32` 每 10 步覆盖 320 条实测房间样本、`lr=2e-6` 超温和保标点、`warmup=3`、`max_steps=40`）。
+- `train/sft_track3b_punct_lr2e5_ga16.yaml`：Phase 6 Track 3B 保标点深物理 SFT 主配置（`train_punct.jsonl` + `target_text_field: text_punct`，四物理场景、`lr=2e-5`、`ga=16`、`r=16`、`max_steps=160`、每 40 步评测）。
+- `train/sft_track3b_punct_lr1e5_ga16.yaml`：Phase 6 Track 3B 保标点深物理 SFT 温和对照（`target_text_field: text_punct`，四物理场景、`lr=1e-5`、`ga=16`、`r=16`、`max_steps=160`）。
+- `train/sft_track3b_punct_phys_lr2e5_ga16.yaml`：Phase 6 Track 3B 保标点纯退化三场景配置（`target_text_field: text_punct`，仅 `[noise, reverb, far_field]`、`lr=2e-5`、`ga=16`、`r=16`、`max_steps=160`）。
+- `train/sft_track3b_punct_phys_lr5e5_ga32.yaml`：Phase 6 Track 3B 保标点大批量高学习率去混响配置（`target_text_field: text_punct`，仅 `[noise, reverb, far_field]`、`lr=5e-5`、`ga=32` 覆盖 5120 条实测退化样本、`max_steps=160`）。
+- `train/sft_track3b_punct_r32_lr2e5_ga16.yaml`：Phase 6 Track 3B 保标点高秩容量配置（`target_text_field: text_punct`，四物理场景、`rank=32`/`alpha=64`、`lr=2e-5`、`ga=16`、`max_steps=160`）。
+- `train/sft_track3b_punct_lr1e5_ga8_step20.yaml`：Phase 6 Track 3B 保标点细粒度早停对照（`target_text_field: text_punct`，四物理场景、`lr=1e-5`、`ga=8`、`max_steps=100`、每 20 步评测）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
