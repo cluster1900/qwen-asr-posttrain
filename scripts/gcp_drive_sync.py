@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -57,8 +58,27 @@ def file_hashes(path: Path) -> tuple[int, str, str]:
     return total, md5.hexdigest(), sha.hexdigest()
 
 
+def _find_gcloud_binary() -> str:
+    found = shutil.which("gcloud")
+    if found:
+        return found
+    for candidate in (
+        Path.home() / "Desktop" / "google-cloud-sdk" / "bin" / "gcloud",
+        Path.home() / "google-cloud-sdk" / "bin" / "gcloud",
+        Path("/opt/homebrew/bin/gcloud"),
+        Path("/usr/local/bin/gcloud"),
+        Path("/usr/bin/gcloud"),
+    ):
+        if candidate.is_file():
+            return str(candidate)
+    return "gcloud"
+
+
 def get_gcloud_access_token(account: str = DEFAULT_ACCOUNT) -> str:
-    cmd = ["gcloud", "auth", "print-access-token", "--account", account]
+    env_tok = os.environ.get("GCP_DRIVE_ACCESS_TOKEN", "").strip()
+    if env_tok:
+        return env_tok
+    cmd = [_find_gcloud_binary(), "auth", "print-access-token", "--account", account]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0 or not proc.stdout.strip():
         raise RuntimeError(f"gcloud token failed for {account}: {proc.stderr.strip()}")

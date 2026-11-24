@@ -3,15 +3,18 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from scripts.gcp_drive_sync import (
     CANONICAL_ROOT_FOLDER_ID,
     FOLDER_MIME,
     GcpDriveClient,
+    get_gcloud_access_token,
     validate_remote_subpath,
 )
 
@@ -38,6 +41,10 @@ class GcpDriveSyncTest(unittest.TestCase):
         for bad in ("/etc/passwd", "../other-project/file", "runs/../escape", "a\\b"):
             with self.assertRaises(ValueError):
                 validate_remote_subpath(bad)
+
+    def test_env_token_override_works_without_gcloud_subprocess(self) -> None:
+        with mock.patch.dict(os.environ, {"GCP_DRIVE_ACCESS_TOKEN": "ya29.test-ephemeral"}):
+            self.assertEqual(get_gcloud_access_token(), "ya29.test-ephemeral")
 
     def test_verify_root_rejects_wrong_folder_name(self) -> None:
         def opener(req: Any, timeout: int = 60) -> _FakeResp:
