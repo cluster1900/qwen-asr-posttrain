@@ -7,9 +7,9 @@
 ## 当前文件清单
 
 - `README.md`：本说明文档。
-- `train_sft.py`：SFT runner。只训练解码器注意力 LoRA，loss 按监督 token 加权，`--resume` 只读 `latest.json`；支持 `profile: pilot | scale` 与可选 `data.train_scenarios`（训练过滤而评测仍跑全量五场景）；评测步透传 `scoring` 可选锁定 WER 字段至 `evaluate`。
+- `train_sft.py`：SFT runner。只训练解码器注意力 LoRA，loss 按监督 token 加权，`--resume` 只读 `latest.json`；支持 `profile: pilot | scale`、可选 `data.train_scenarios`（训练过滤而评测仍跑全量五场景）与可选 `data.target_text_field`（如 `text_punct`，启动强断言归一化字符与官方 `text` 100% 一致，评测仍用 `val.jsonl` 原始 `text`）；评测步透传 `scoring` 可选锁定 WER 字段至 `evaluate`。
 - `build_sft_smoke_subset.py`：从已有 train/val manifest 抽 smoke 子集。10 个 train source、2 个 val source，每个 source 保留五类场景。
-- `sft_schema.py`：`qwen3-asr-train-v1` 解析和语义 hash，支持可选 `runtime.environment_lock_file`（默认 `requirements.lock`，不改变历史配置哈希；Track 3 可指向 `requirements.track3.lock`）、可选 `optim.scheduler_max_steps` 解耦余弦周期与 `train.max_steps`、可选 `data.train_scenarios` 与 `profile: scale`。未知字段会在创建 optimizer 之前拒绝。
+- `sft_schema.py`：`qwen3-asr-train-v1` 解析和语义 hash，支持可选 `runtime.environment_lock_file`（默认 `requirements.lock`，不改变历史配置哈希；Track 3 可指向 `requirements.track3.lock`）、可选 `optim.scheduler_max_steps` 解耦余弦周期与 `train.max_steps`、可选 `data.train_scenarios`、可选 `data.target_text_field` 与 `profile: scale`。未知字段会在创建 optimizer 之前拒绝。
 - `sft_contract.py`：LoRA 名称、label mask、token 加权 loss、sampler、smoke 抽样、运行时间上限和未完成评测记录。
 - `sft_checkpoint.py`：checkpoint checksum 和 `latest.json`。`.incoming` 不能作为恢复来源。
 - `sft_release.py`：把 gate 选出的 `pilot` 或 `scale` checkpoint 收成不可变 SFT release，并在新进程里核对 greedy 文本。`latest.json` 不作为 release。

@@ -178,4 +178,17 @@ P9 的 50 条只覆盖本机已解压的 train `S0002`、`S0003`、`S0004`，而
 - **验收**：本地合同测试全部通过；真实 `results/phase6_track3_slr28_20261124/manifest/`（`19685` train / `2500` val / `2500` test）通过独立校验退出码 `0`、`slr28_split_audit.json` 零泄漏、前期音频包与清单全部同步至 `MyDrive/qwen3-asr/data/aishell1_slr28/20261124/` 且 MD5/SHA-256 100% 校验一致。
 - **影响**：新增独立 Track 3 物理增强数据流与 GCP Drive 同步工具，完全不改动 Phase 1–5 和 Track 2 的冻结清单、音频或历史哈希。
 
+### Phase 6 Track 3B：训练集 Clean 自对齐标点恢复（零字符改动、零验证/测试泄漏）（2026-11-25）
+
+- **背景**：Track 3 Wave 1–2 实测与逐条取证证实，`Qwen/Qwen3-ASR-0.6B` Base 在 500/500（`100%`）中文语句上输出自然韵律标点（`，。？！、：“”`），而 AISHELL-1 官方金标 `text` 不含标点；在无标点 `text` 上直接 SFT 会导致 `>90%` 的交叉熵梯度（初始 loss `~2.4 nats`）消耗在暴力抹除标点上，20–30 步后即引发停顿处连字歧义（如 `工业、建筑→工业借助`、`说：“清者自清”→说轻者自轻`），将物理退化三场景的 SFT 收益锁死在 `-6 ~ -7` 字编辑（`P(\Delta<0) \approx 0.80`）上限。
+- **范围**：仅作用于 Track 3 `train.jsonl` 的 `3,937` 条 `clean` 源语句，生成并存的附加训练清单 `train_punct.jsonl`（在每条训练行新增 `text_punct` 字段，保留原始 `text` 字段逐字节不变）。**严禁**对 `val.jsonl`、`test.jsonl` 或任何 OOD 评测集生成或使用 `text_punct`；所有验证与终局评测始终以官方无标点 `text` 与 `zh-cer-v1` 评分。
+- **设计**：
+  1. 用冻结官方 Base `Qwen/Qwen3-ASR-0.6B`（同一 `decode.eval` greedy 契约 `4a4fee2b...`）仅对 `train.jsonl` 中的 `3,937` 条 `clean` 音频做确定性分片解码，得到 `train_clean_base_predictions.jsonl`。
+  2. 新增 `scripts/align_train_punctuation.py`：对每个训练 `source_utterance_id`，使用 `evaluation/zh_cer.py` 的确定性字符级 Levenshtein 对齐，把 Base `clean` 预测中的中文标点按原字符位置投射回官方 AISHELL-1 `text` 上生成 `text_punct`（保留标点集合 `，。？！、；：""''（）《》`），并在写盘前对 `100%` 的训练行强断言 `normalize_zh(text_punct) == normalize_zh(text)`（**零增字、零删字、零改字**）。
+  3. 同一 `source_utterance_id` 下的所有场景（`clean`/`noise`/`reverb`/`far_field`/`dropout`）共享其 `clean` 音频派生的同一 `text_punct`，使 SFT 在 `noise`/`reverb`/`far_field` 上保留 Qwen3-ASR 预训练韵律标点先验，把几乎全部有效梯度集中于真实房间 RIR 混响与远场噪声的声学消歧。
+  4. 写出审计摘要 `train_punct_audit.json`（含输入 `train.jsonl` 与 `train_clean_base_predictions.jsonl` SHA-256、恢复标点行数占比、零字符偏差断言通过率及 `train_punct.jsonl` SHA-256）并归档至 `MyDrive/qwen3-asr/data/aishell1_slr28/20261124/`。
+- **测试**：`python3 -m unittest tests.test_align_train_punctuation tests.test_directory_readmes -v`。验证完全匹配、单字替换、插入/删除与句尾句号/问号场景下标点投射正确性、`normalize_zh(text_punct) == normalize_zh(text)` 强断言、拒绝非 `train` split 行与缺失源预测，以及二次运行逐字节确定性。
+- **验收**：本地合同测试退出码 `0`；真实 `train_punct.jsonl`（`19,685` 行）全部通过零字符偏差断言（`char_mismatch == 0`）、标点恢复率 `>= 95%`，归档至 `MyDrive/qwen3-asr/data/aishell1_slr28/20261124/` 并完成 MD5 校验。
+- **影响**：完全不覆盖或修改原始 `train.jsonl`、`val.jsonl`、`test.jsonl` 及任何历史配置哈希；通过 SFT 配置可选字段 `data.target_text_field: text_punct` 显式启用。
+
 采用相对路径、文件级 split、纯文本 `text` 和显式 source ID 后，旧的绝对路径 manifest、混入特殊 token 的标注和未带版本 hash 的结果不能直接复用；必须重新物化或提供迁移报告。该合同同时支持本地单测和 Colab Drive 恢复，不改变外部数据原始文件。

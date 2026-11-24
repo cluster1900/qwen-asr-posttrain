@@ -187,11 +187,12 @@ def collate_example(
     eos_id: int,
     max_input_tokens: int,
     max_transcript_tokens: int,
+    target_text_field: str = "text",
 ) -> dict[str, Any]:
     """Build one supervised example. Padding is masked without erasing a real EOS."""
     import torch
 
-    target = str(row["text"])
+    target = str(row[target_text_field])
     full_inputs = processor(
         text=[prefix + target + eos_token],
         audio=[audio],
@@ -829,6 +830,27 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             if not train_rows:
                 raise RunStop("data_failed", "no train rows remain after data.train_scenarios filter", 3)
             print(f"SFT_TRAIN_SCENARIOS {','.join(train_scenarios)} train_rows={len(train_rows)}", flush=True)
+        target_text_field = str(config["data"].get("target_text_field") or "text")
+        if target_text_field != "text":
+            from evaluation.zh_cer import normalize_zh_cer_v1 as _norm_zh
+
+            punct_rows = 0
+            for r in train_rows:
+                cand = r.get(target_text_field)
+                if not isinstance(cand, str) or not cand.strip():
+                    raise RunStop("data_failed", f"missing {target_text_field} on {r.get('sample_id')}", 2)
+                if _norm_zh(cand) != _norm_zh(str(r["text"])):
+                    raise RunStop(
+                        "data_failed",
+                        f"{target_text_field} character mismatch on {r.get('sample_id')}",
+                        2,
+                    )
+                if cand != str(r["text"]):
+                    punct_rows += 1
+            print(
+                f"SFT_TARGET_TEXT_FIELD {target_text_field} verified_rows={len(train_rows)} punct_rows={punct_rows}",
+                flush=True,
+            )
         manifest_sha = {
             "train": sha256_file(train_manifest),
             "val": sha256_file(val_manifest),
@@ -876,6 +898,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                     eos_id=int(eos_id),
                     max_input_tokens=int(config["data"]["max_input_tokens"]),
                     max_transcript_tokens=int(config["data"]["max_transcript_tokens"]),
+                    target_text_field=target_text_field,
                 )
             except ValueError as exc:
                 raise RunStop("data_failed", str(exc), 4) from exc

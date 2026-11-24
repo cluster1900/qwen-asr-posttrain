@@ -268,6 +268,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
             "overlength",
             "sampler",
             "train_scenarios",
+            "target_text_field",
         },
         "data",
     )
@@ -287,6 +288,12 @@ def load_train_config(path: Path) -> dict[str, Any]:
                 raise ValueError(f"invalid or duplicate data.train_scenarios entry: {name}")
             seen_sc.append(name)
         train_scenarios = seen_sc
+    raw_target_field = data.get("target_text_field")
+    target_text_field: str | None = None
+    if raw_target_field is not None:
+        target_text_field = _as_str(raw_target_field, "data.target_text_field")
+        if target_text_field not in {"text", "text_punct"}:
+            raise ValueError(f"invalid data.target_text_field: {target_text_field}")
 
     batch = _mapping(raw.get("batch"), "batch")
     _reject_unknown(batch, {"micro_batch_size", "gradient_accumulation_steps", "eval_batch_size"}, "batch")
@@ -489,6 +496,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
             "overlength": "reject",
             "sampler": "seeded_shuffle",
             **({"train_scenarios": train_scenarios} if train_scenarios is not None else {}),
+            **({"target_text_field": target_text_field} if target_text_field is not None else {}),
         },
         "batch": {
             "micro_batch_size": 1,
@@ -653,6 +661,11 @@ def semantic_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[str, 
             **(
                 {"train_scenarios": resolved["data"]["train_scenarios"]}
                 if resolved["data"].get("train_scenarios") is not None
+                else {}
+            ),
+            **(
+                {"target_text_field": resolved["data"]["target_text_field"]}
+                if resolved["data"].get("target_text_field") is not None
                 else {}
             ),
         },

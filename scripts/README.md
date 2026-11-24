@@ -26,6 +26,7 @@
 - `build_slr28_manifest.py`：基于 `configs/data/manifest_slr28_track3.yaml` 与 `rirs_noises.zip` 构建并独立校验 Track 3 五场景物理增强 manifest，写出 `train.jsonl`、`val.jsonl`、`test.jsonl`、`rejected.jsonl`、`slr28_split_audit.json`、`manifest.json` 与 `sha256.json`。
 - `gcp_drive_sync.py`：通过 GCP `gcloud` 访问令牌执行 Google Drive v3 可恢复上传、下载与列举，强制锁定主工程目录 `MyDrive/qwen3-asr`（Folder ID `1OWJDWy_iQ1N8hZbLKQOVWhYqwCyDIr-Z`），拒绝路径穿越并逐文件核对远端字节大小与 `md5Checksum`。
 - `run_sharded_decode.py`：多 A100 确定性分片 greedy 推理与严格按 `sample_id` 顺序合并工具，复用训练/发布统一 `decode_eval_rows` 路径，支持断点续跑、锁定 `jieba` WER 评测及 `qwen3-asr-baseline-v1` 基准文件生成。
+- `align_train_punctuation.py`：Phase 6 Track 3B 训练集 Clean 自对齐标点恢复脚本。读取仅限 `train` split 的 Base `clean` 音频 greedy 预测，通过 Levenshtein 字符对齐把自然韵律标点投射回官方 AISHELL-1 `text` 生成 `train_punct.jsonl`（新增 `text_punct` 字段，保留原始 `text` 不变，对 `100%` 训练行强断言 `normalize_zh(text_punct) == normalize_zh(text)`，严禁触碰 `val`/`test`），并输出审计文件 `train_punct_audit.json`。
 
 `drive_sync.py` 还没有实现。checkpoint 恢复属于 Phase 2。正式配置的 `source_version` 是 `aishell1-openslr33-pilot-20261015`。
 
