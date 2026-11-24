@@ -264,20 +264,40 @@ def check_pair_metadata(payload: dict[str, Any], config: dict[str, Any], release
         raise ValueError("pair metadata does not pin the null val pairs")
 
 
-def _is_aligned_substitution_pair(row: dict[str, Any], *, max_edit_count: int | None = None) -> bool:
-    """True when chosen and rejected are punctuation-free, equal-length, equal-token substitutions."""
+def _is_aligned_substitution_pair(
+    row: dict[str, Any],
+    *,
+    max_edit_count: int | None = None,
+    allow_matched_punctuation: bool = False,
+) -> bool:
+    """True when chosen and rejected are equal-length, equal-token substitutions.
+
+    When ``allow_matched_punctuation`` is False (legacy default), both strings must
+    be punctuation-free. When True, non-normalized (punctuation/space) characters
+    are allowed only if they match identically at identical character positions so
+    every mismatch is strictly a normalized character substitution.
+    """
     chosen = str(row.get("chosen_text", ""))
     rejected = str(row.get("rejected_text", ""))
     if not chosen or not rejected:
         return False
-    if normalize_zh_cer_v1(chosen) != chosen or normalize_zh_cer_v1(rejected) != rejected:
-        return False
+    chosen_norm = normalize_zh_cer_v1(chosen)
+    rejected_norm = normalize_zh_cer_v1(rejected)
+    if not allow_matched_punctuation:
+        if chosen_norm != chosen or rejected_norm != rejected:
+            return False
     if len(chosen) != len(rejected):
         return False
     if "char_length_delta" in row and row["char_length_delta"] is not None and int(row["char_length_delta"]) != 0:
         return False
     if int(row.get("chosen_token_count", -1)) != int(row.get("rejected_token_count", -2)):
         return False
+    if allow_matched_punctuation:
+        for left, right in zip(chosen, rejected):
+            left_norm = normalize_zh_cer_v1(left)
+            right_norm = normalize_zh_cer_v1(right)
+            if (not left_norm or not right_norm) and left != right:
+                return False
     hamming = sum(1 for left, right in zip(chosen, rejected) if left != right)
     if hamming <= 0:
         return False
@@ -290,7 +310,7 @@ def _is_aligned_substitution_pair(row: dict[str, Any], *, max_edit_count: int | 
         and int(row["edit_count"]) > int(max_edit_count)
     ):
         return False
-    return hamming == edit_distance(list(chosen), list(rejected))
+    return hamming == edit_distance(list(chosen_norm), list(rejected_norm))
 
 
 def mismatched_token_mask(chosen_labels: list[int], rejected_labels: list[int]) -> list[bool]:
@@ -358,6 +378,7 @@ def select_training_pairs(
     scenarios: list[str] | None,
     *,
     aligned_substitution_only: bool = False,
+    allow_matched_punctuation: bool = False,
     max_edit_count: int | None = None,
     ref_margin_min: float | None = None,
     ref_margin_max: float | None = None,
@@ -387,7 +408,11 @@ def select_training_pairs(
                 and clean_map.get(source_id) == normalize_zh_cer_v1(str(row.get("rejected_text", "")))
             ):
                 continue
-        if aligned_substitution_only and not _is_aligned_substitution_pair(row, max_edit_count=max_edit_count):
+        if aligned_substitution_only and not _is_aligned_substitution_pair(
+            row,
+            max_edit_count=max_edit_count,
+            allow_matched_punctuation=allow_matched_punctuation,
+        ):
             continue
         if max_edit_count is not None and not aligned_substitution_only:
             chosen_norm = normalize_zh_cer_v1(str(row.get("chosen_text", "")))
@@ -514,6 +539,7 @@ def validate_pair_rows(
     split: str,
     min_per_scenario: int,
     required_scenarios: tuple[str, ...] | None = None,
+    allow_matched_punctuation: bool = False,
 ) -> dict[str, int]:
     """Reject ties, empty logprobs, and a required scenario that is under the floor."""
     required = SCENARIO_NAMES if required_scenarios is None else required_scenarios
@@ -536,8 +562,17 @@ def validate_pair_rows(
         if scenario not in counts:
             raise ValueError(f"{pair_id} has an unknown scenario")
         counts[str(scenario)] += 1
-        if row.get("chosen_text") != row.get("reference_text"):
-            raise ValueError(f"{pair_id} chosen text is not the reference")
+        chosen_text = row.get("chosen_text")
+        reference_text = row.get("reference_text")
+        if chosen_text != reference_text:
+            if not (
+                allow_matched_punctuation
+                and isinstance(chosen_text, str)
+                and isinstance(reference_text, str)
+                and chosen_text.strip()
+                and normalize_zh_cer_v1(chosen_text) == normalize_zh_cer_v1(reference_text)
+            ):
+                raise ValueError(f"{pair_id} chosen text is not the reference")
         rejected = row.get("rejected_text")
         if not isinstance(rejected, str) or not rejected.strip():
             raise ValueError(f"{pair_id} rejected text is empty")

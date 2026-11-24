@@ -38,6 +38,7 @@ RL_FIELDS = {
     "train_scenarios",
     "loss_token_scope",
     "max_edit_count",
+    "allow_matched_punctuation",
     "accumulate_signal_groups_only",
     "dropout_anchor_weight",
 }
@@ -127,6 +128,9 @@ def _parse_rl_block(raw: dict[str, Any], config_path: Path) -> dict[str, Any]:
     max_edit_count: int | None = None
     if raw_max_edit is not None:
         max_edit_count = _as_int(raw_max_edit, "rl.max_edit_count", minimum=1, maximum=5)
+    raw_allow_punct = raw.get("allow_matched_punctuation", False)
+    if not isinstance(raw_allow_punct, bool):
+        raise ValueError("rl.allow_matched_punctuation must be a boolean")
     raw_accum_signal = raw.get("accumulate_signal_groups_only", False)
     if not isinstance(raw_accum_signal, bool):
         raise ValueError("rl.accumulate_signal_groups_only must be a boolean")
@@ -147,6 +151,7 @@ def _parse_rl_block(raw: dict[str, Any], config_path: Path) -> dict[str, Any]:
         "train_scenarios": train_scenarios,
         "loss_token_scope": loss_token_scope,
         "max_edit_count": max_edit_count,
+        "allow_matched_punctuation": raw_allow_punct,
         "accumulate_signal_groups_only": raw_accum_signal,
         "dropout_anchor_weight": dropout_anchor_weight,
         "parent_metrics": parent["metrics"],
@@ -367,6 +372,11 @@ def semantic_rl_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[st
                     "train_scenarios": rl["train_scenarios"],
                     "loss_token_scope": rl["loss_token_scope"],
                     "max_edit_count": rl["max_edit_count"],
+                    **(
+                        {"allow_matched_punctuation": True}
+                        if bool(rl.get("allow_matched_punctuation", False))
+                        else {}
+                    ),
                     "accumulate_signal_groups_only": rl["accumulate_signal_groups_only"],
                     "dropout_anchor_weight": rl["dropout_anchor_weight"],
                 }

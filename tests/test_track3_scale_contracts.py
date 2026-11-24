@@ -102,6 +102,130 @@ class Track3ScaleContractsTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_train_config(bad)
 
+    def test_build_dpo_pairs_align_punctuation_and_dpo_allow_matched_punctuation(self) -> None:
+        from scripts.build_dpo_pairs import char_token_count, classify_row
+        from train.dpo_contract import select_training_pairs, validate_pair_rows
+
+        manifest_row = {
+            "sample_id": "s1__far_field",
+            "split": "train",
+            "scenario": "far_field",
+            "source_utterance_id": "s1",
+            "audio": "wavs/s1.wav",
+            "text": "在工业建筑领域建设新方案",
+        }
+        pred_row = {
+            "sample_id": "s1__far_field",
+            "reference_raw": "在工业建筑领域建设新方案",
+            "prediction_raw": "在工业、建筑领域，借助新方案。",
+            "stop_reason": "eos",
+            "error": "",
+        }
+        legacy_rec = classify_row(
+            manifest_row,
+            pred_row,
+            split="train",
+            count_tokens=char_token_count,
+            max_transcript_tokens=64,
+        )
+        self.assertEqual(legacy_rec["chosen_text"], "在工业建筑领域建设新方案")
+
+        punct_rec = classify_row(
+            manifest_row,
+            pred_row,
+            split="train",
+            count_tokens=char_token_count,
+            max_transcript_tokens=64,
+            align_punctuation_from_rejected=True,
+        )
+        self.assertEqual(punct_rec["bucket"], "pair")
+        self.assertEqual(punct_rec["reference_text"], "在工业建筑领域建设新方案")
+        self.assertEqual(punct_rec["chosen_text"], "在工业、建筑领域，建设新方案。")
+        self.assertEqual(punct_rec["chosen_token_count"], punct_rec["rejected_token_count"])
+        punct_rec["ref_chosen_logp"] = -2.0
+        punct_rec["ref_rejected_logp"] = -1.5
+
+        with self.assertRaises(ValueError):
+            validate_pair_rows([punct_rec], split="train", min_per_scenario=1, required_scenarios=("far_field",))
+        counts = validate_pair_rows(
+            [punct_rec],
+            split="train",
+            min_per_scenario=1,
+            required_scenarios=("far_field",),
+            allow_matched_punctuation=True,
+        )
+        self.assertEqual(counts["far_field"], 1)
+
+        # Legacy strict filter rejects punctuated pairs; allow_matched_punctuation accepts identical punctuation.
+        self.assertEqual(
+            select_training_pairs([punct_rec], ["far_field"], aligned_substitution_only=True, max_edit_count=2),
+            [],
+        )
+        kept = select_training_pairs(
+            [punct_rec],
+            ["far_field"],
+            aligned_substitution_only=True,
+            allow_matched_punctuation=True,
+            max_edit_count=2,
+        )
+        self.assertEqual(len(kept), 1)
+
+        # Mismatched punctuation character or position must still be rejected.
+        bad_punct = dict(punct_rec, pair_id="s1__bad", chosen_text="在工业，建筑领域，建设新方案。")
+        self.assertEqual(
+            select_training_pairs(
+                [bad_punct],
+                ["far_field"],
+                aligned_substitution_only=True,
+                allow_matched_punctuation=True,
+                max_edit_count=2,
+            ),
+            [],
+        )
+
+    def test_rl_allow_matched_punctuation_and_schema_hashes(self) -> None:
+        from train.rl_contract import aligned_group_mismatch_mask
+
+        cands = [
+            {"prediction_raw": "你好，世界。", "reward": 1.0},
+            {"prediction_raw": "你好，世界。", "reward": 1.0},
+            {"prediction_raw": "你好，世借。", "reward": 0.75},
+            {"prediction_raw": "你好。世借。", "reward": 0.75},
+        ]
+        tok_ids = [
+            [1, 2, 10, 3, 4, 11, 99],
+            [1, 2, 10, 3, 4, 11, 99],
+            [1, 2, 10, 3, 5, 11, 99],
+            [1, 2, 12, 3, 5, 11, 99],
+        ]
+        legacy = aligned_group_mismatch_mask(cands, tok_ids, max_edit_count=2)
+        self.assertFalse(legacy["aligned_valid"])
+
+        matched = aligned_group_mismatch_mask(
+            cands, tok_ids, max_edit_count=2, allow_matched_punctuation=True
+        )
+        self.assertTrue(matched["aligned_valid"])
+        self.assertEqual(matched["mismatch_index"], 4)
+        # Candidate 3 has a punctuation mismatch ('。' vs '，') so it is excluded; only [0, 1, 2] align.
+        self.assertEqual(matched["aligned_indices"], [0, 1, 2])
+        self.assertEqual(matched["token_mask"], [False, False, False, False, True, False, False])
+
+        # Verify legacy DPO & RL pilot config hashes remain bit-exact when allow_matched_punctuation is omitted.
+        msha = {"train": "a" * 64, "val": "b" * 64, "metadata": "c" * 64}
+        dpo_legacy = load_dpo_config(Path("configs/train/dpo_pilot_edit1_anchor_step40_h100.yaml"))
+        self.assertFalse(dpo_legacy["dpo"]["allow_matched_punctuation"])
+        dpo_h1 = semantic_dpo_config_sha256(dpo_legacy, msha)
+        dpo_mod = copy.deepcopy(dpo_legacy)
+        dpo_mod["dpo"]["allow_matched_punctuation"] = True
+        self.assertNotEqual(semantic_dpo_config_sha256(dpo_mod, msha), dpo_h1)
+
+        rl_legacy = load_rl_config(Path("configs/train/rl_pilot_aligned.yaml"))
+        self.assertFalse(rl_legacy["rl"]["allow_matched_punctuation"])
+        rl_h1 = semantic_rl_config_sha256(rl_legacy, msha)
+        rl_mod = copy.deepcopy(rl_legacy)
+        rl_mod["rl"]["allow_matched_punctuation"] = True
+        self.assertNotEqual(semantic_rl_config_sha256(rl_mod, msha), rl_h1)
+
 
 if __name__ == "__main__":
     unittest.main()

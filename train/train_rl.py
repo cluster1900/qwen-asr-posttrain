@@ -866,6 +866,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                         group_eval["candidates"],
                         cand_label_ids,
                         max_edit_count=max_edit_count,
+                        allow_matched_punctuation=bool(config["rl"].get("allow_matched_punctuation", False)),
                     )
                     if not aligned_info["aligned_valid"]:
                         effective_zero_adv = True

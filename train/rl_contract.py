@@ -275,15 +275,20 @@ def aligned_group_mismatch_mask(
     candidate_label_ids: list[list[int]],
     *,
     max_edit_count: int = 2,
+    allow_matched_punctuation: bool = False,
 ) -> dict[str, Any]:
-    """Isolate equal-token-length, punctuation-free substitution candidates within a rollout group.
+    """Isolate equal-token-length substitution candidates within a rollout group.
 
     Selects the highest-reward candidate ``i_best`` as anchor. Finds all
     positive copies matching ``y_best`` and all negative candidates with the
-    same supervised token count, no punctuation, and ``1 <= mismatches <= max_edit_count``
-    sharing the same first mismatch position ``t_0``. Re-centers advantages over
-    the aligned subset so ``sum(aligned_advantages) == 0`` and masks policy
-    gradient to position ``t_0`` where the prefix context is 100% identical.
+    same supervised token count and ``1 <= mismatches <= max_edit_count``
+    sharing the same first mismatch position ``t_0``. When
+    ``allow_matched_punctuation`` is False (legacy default), punctuation is
+    rejected; when True, non-normalized characters are allowed only if
+    ``len(pred) == len(best_pred)`` and every non-normalized character matches
+    identically at identical positions. Re-centers advantages over the aligned
+    subset so ``sum(aligned_advantages) == 0`` and masks policy gradient to
+    position ``t_0`` where the prefix context is 100% identical.
     """
     if not candidates or len(candidates) != len(candidate_label_ids):
         raise ValueError("candidates and candidate_label_ids must have the same non-zero length")
@@ -293,7 +298,7 @@ def aligned_group_mismatch_mask(
     best_reward = float(candidates[best_idx]["reward"])
     best_pred = str(candidates[best_idx].get("prediction_raw") or "")
     best_ids = list(candidate_label_ids[best_idx])
-    if len(best_ids) < 2 or _has_punctuation(best_pred):
+    if len(best_ids) < 2 or not best_pred or (not allow_matched_punctuation and _has_punctuation(best_pred)):
         return {
             "aligned_valid": False,
             "best_index": best_idx,
@@ -306,8 +311,19 @@ def aligned_group_mismatch_mask(
     neg_candidates: list[tuple[int, int]] = []
     for idx, (cand, tok_ids) in enumerate(zip(candidates, candidate_label_ids)):
         pred = str(cand.get("prediction_raw") or "")
-        if _has_punctuation(pred) or len(tok_ids) != len(best_ids):
+        if not pred or len(tok_ids) != len(best_ids):
             continue
+        if not allow_matched_punctuation:
+            if _has_punctuation(pred):
+                continue
+        else:
+            if len(pred) != len(best_pred):
+                continue
+            if any(
+                (not normalize_zh_cer_v1(a) or not normalize_zh_cer_v1(b)) and a != b
+                for a, b in zip(best_pred, pred)
+            ):
+                continue
         if list(tok_ids) == best_ids:
             pos_indices.append(idx)
             continue

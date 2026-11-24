@@ -142,6 +142,7 @@ def classify_row(
     split: str,
     count_tokens: Callable[[str], int],
     max_transcript_tokens: int,
+    align_punctuation_from_rejected: bool = False,
 ) -> dict[str, Any]:
     """Return one pair record with ``bucket`` set to pair, rejected, or overlength."""
     sample_id = _require_str(manifest, "sample_id", "manifest row")
@@ -163,13 +164,20 @@ def classify_row(
     rejected = prediction.get("prediction_raw")
     if not isinstance(rejected, str):
         raise PairBuildError(f"{sample_id} is missing prediction_raw")
+    chosen = reference
+    if align_punctuation_from_rejected and rejected.strip():
+        from scripts.align_train_punctuation import align_punctuation
+
+        chosen = align_punctuation(reference, rejected)
+        if normalize_zh_cer_v1(chosen) != normalize_zh_cer_v1(reference):
+            raise PairBuildError(f"{sample_id} aligned chosen_text violated character invariance")
     scored = score_pair(
         reference,
         rejected,
         inference_error=False,
         stop_reason=prediction.get("stop_reason") if isinstance(prediction.get("stop_reason"), str) else None,
     )
-    chosen_tokens = count_tokens(reference)
+    chosen_tokens = count_tokens(chosen)
     rejected_tokens = count_tokens(rejected)
     if chosen_tokens < 1 or rejected_tokens < 1:
         raise PairBuildError(f"{sample_id} token count must include EOS")
@@ -182,7 +190,7 @@ def classify_row(
         "scenario": scenario,
         "split": split,
         "reference_text": reference,
-        "chosen_text": reference,
+        "chosen_text": chosen,
         "rejected_text": rejected,
         "chosen_cer": 0.0,
         "rejected_cer": scored["sample_cer"],
@@ -330,6 +338,7 @@ def build_dpo_pairs(
     min_val_pairs: int = 100,
     min_pairs_per_scenario: int = 10,
     audit_per_scenario: int = 20,
+    align_punctuation_from_rejected: bool = False,
 ) -> dict[str, Any]:
     """Write pair files. Raises PairBuildError before any pair file is published."""
     if max_transcript_tokens < 1:
@@ -366,6 +375,7 @@ def build_dpo_pairs(
                 split=split,
                 count_tokens=count_tokens,
                 max_transcript_tokens=max_transcript_tokens,
+                align_punctuation_from_rejected=align_punctuation_from_rejected,
             )
             bucket = record["bucket"]
             if bucket == "pair":
@@ -446,6 +456,7 @@ def build_dpo_pairs(
                 "min_pairs_per_scenario": min_pairs_per_scenario,
                 "audit_per_scenario": audit_per_scenario,
                 "seed": seed,
+                **({"align_punctuation_from_rejected": True} if align_punctuation_from_rejected else {}),
             },
         }
         (staging / "pair_metadata.json").write_text(
@@ -501,6 +512,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-val-pairs", type=int, default=100)
     parser.add_argument("--min-pairs-per-scenario", type=int, default=10)
     parser.add_argument("--audit-per-scenario", type=int, default=20)
+    parser.add_argument("--align-punctuation-from-rejected", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -540,6 +552,7 @@ def main(argv: list[str] | None = None) -> int:
             min_val_pairs=args.min_val_pairs,
             min_pairs_per_scenario=args.min_pairs_per_scenario,
             audit_per_scenario=args.audit_per_scenario,
+            align_punctuation_from_rejected=bool(args.align_punctuation_from_rejected),
         )
     except PairBuildError as exc:
         _write_failure(args.output_dir, str(exc))

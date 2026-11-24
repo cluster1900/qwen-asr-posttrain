@@ -49,6 +49,7 @@ DPO_FIELDS = {
     "source_null_train_pairs_sha256",
     "source_null_val_pairs_sha256",
     "aligned_substitution_only",
+    "allow_matched_punctuation",
     "exclude_clean_identical_rejected",
     "max_edit_count",
     "loss_token_scope",
@@ -159,6 +160,9 @@ def _parse_pair_filter_fields(raw: dict[str, Any]) -> dict[str, Any]:
     aligned_raw = raw.get("aligned_substitution_only", False)
     if not isinstance(aligned_raw, bool):
         raise ValueError("dpo.aligned_substitution_only must be a boolean")
+    allow_punct_raw = raw.get("allow_matched_punctuation", False)
+    if not isinstance(allow_punct_raw, bool):
+        raise ValueError("dpo.allow_matched_punctuation must be a boolean")
     exclude_clean_raw = raw.get("exclude_clean_identical_rejected", False)
     if not isinstance(exclude_clean_raw, bool):
         raise ValueError("dpo.exclude_clean_identical_rejected must be a boolean")
@@ -177,6 +181,7 @@ def _parse_pair_filter_fields(raw: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("dpo.ref_margin_min must be strictly less than dpo.ref_margin_max")
     return {
         "aligned_substitution_only": aligned_raw,
+        "allow_matched_punctuation": allow_punct_raw,
         "exclude_clean_identical_rejected": exclude_clean_raw,
         "max_edit_count": max_edit_count,
         "loss_token_scope": loss_token_scope_raw,
@@ -543,6 +548,11 @@ def semantic_dpo_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[s
             **(
                 {
                     "aligned_substitution_only": bool(dpo.get("aligned_substitution_only", False)),
+                    **(
+                        {"allow_matched_punctuation": True}
+                        if bool(dpo.get("allow_matched_punctuation", False))
+                        else {}
+                    ),
                     "exclude_clean_identical_rejected": bool(dpo.get("exclude_clean_identical_rejected", False)),
                     "max_edit_count": dpo.get("max_edit_count"),
                     "loss_token_scope": dpo.get("loss_token_scope", "sequence"),
@@ -565,6 +575,7 @@ def semantic_dpo_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[s
                 }
                 if (
                     bool(dpo.get("aligned_substitution_only", False))
+                    or bool(dpo.get("allow_matched_punctuation", False))
                     or bool(dpo.get("exclude_clean_identical_rejected", False))
                     or dpo.get("max_edit_count") is not None
                     or dpo.get("loss_token_scope", "sequence") != "sequence"

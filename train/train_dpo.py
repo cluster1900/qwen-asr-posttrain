@@ -354,8 +354,19 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
         pair_train = read_jsonl(resolve_from_repo(Path(config["dpo"]["pair_train_manifest"])))
         pair_val = read_jsonl(resolve_from_repo(Path(config["dpo"]["pair_val_manifest"])))
         min_per_scenario = int(config["dpo"]["min_pairs_per_scenario"])
-        train_counts = validate_pair_rows(pair_train, split="train", min_per_scenario=min_per_scenario)
-        val_counts = validate_pair_rows(pair_val, split="val", min_per_scenario=min_per_scenario)
+        allow_matched_punctuation = bool(config["dpo"].get("allow_matched_punctuation", False))
+        train_counts = validate_pair_rows(
+            pair_train,
+            split="train",
+            min_per_scenario=min_per_scenario,
+            allow_matched_punctuation=allow_matched_punctuation,
+        )
+        val_counts = validate_pair_rows(
+            pair_val,
+            split="val",
+            min_per_scenario=min_per_scenario,
+            allow_matched_punctuation=allow_matched_punctuation,
+        )
         _require_sha(
             resolve_from_repo(Path(config["dpo"]["pair_train_manifest"])),
             config["dpo"]["filled_train_pairs_sha256"],
@@ -384,6 +395,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
         max_edit_count = config["dpo"].get("max_edit_count")
         pair_filter_kwargs = {
             "aligned_substitution_only": bool(config["dpo"].get("aligned_substitution_only", False)),
+            "allow_matched_punctuation": allow_matched_punctuation,
             "ref_margin_min": config["dpo"].get("ref_margin_min"),
             "ref_margin_max": config["dpo"].get("ref_margin_max"),
         }
@@ -409,12 +421,14 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 split="train",
                 min_per_scenario=min_per_scenario,
                 required_scenarios=required_train_scenarios,
+                allow_matched_punctuation=allow_matched_punctuation,
             )
             val_counts = validate_pair_rows(
                 pref_rows,
                 split="val",
                 min_per_scenario=min_per_scenario,
                 required_scenarios=required_val_scenarios,
+                allow_matched_punctuation=allow_matched_punctuation,
             )
         if len(train_pair_rows) < int(config["dpo"]["min_train_pairs"]) or len(pref_rows) < int(config["gate"]["min_val_pairs"]):
             raise RunStop("data_failed", "pair count is below the DPO floor", 4)
