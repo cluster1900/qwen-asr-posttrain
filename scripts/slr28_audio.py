@@ -715,7 +715,7 @@ def render_slr28_scenarios(
         mono = arr[:, ch] if arr.ndim == 2 else arr
         if int(sr) != 16000:
             mono = np.asarray(to_mono_16k(mono.astype(np.float32), int(sr)), dtype=np.float64)
-        if len(wav_cache) < 4096:
+        if len(wav_cache) < 256 and mono.size <= 64000:
             wav_cache[meta_key] = np.array([n_ch], dtype=np.int64)
             wav_cache[(member_path, ch)] = mono
         return mono, ch
