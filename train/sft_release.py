@@ -151,8 +151,8 @@ def prepare_release(
     if output_dir.exists():
         raise ValueError(f"release directory already exists: {output_dir}")
     config = load_train_config(config_path)
-    if config["profile"] != "pilot":
-        raise ValueError("only a pilot profile can be released")
+    if config["profile"] not in {"pilot", "scale"}:
+        raise ValueError("only a pilot or scale profile can be released")
     if config["model"]["parent_release_sha256"] is not None:
         raise ValueError("this SFT release must have a null parent")
     gate = json.loads((run_dir / "gate.json").read_text(encoding="utf-8"))

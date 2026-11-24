@@ -720,6 +720,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
     )
     parser.add_argument("--pilot-sample-tar", type=Path)
+    parser.add_argument(
+        "--allow-any-published-releases",
+        action="store_true",
+        help="允许评估 Track 3 新封存测试集与已发布 SFT/DPO/RL release（仍强制核对 sha256.json、published 与完整谱系）",
+    )
     return parser
 
 
@@ -739,6 +744,7 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
             drive_root=args.drive_root,
             pilot_sample_tar=args.pilot_sample_tar,
+            enforce_pinned_hashes=not bool(args.allow_any_published_releases),
         )
     except (OSError, ValueError, json.JSONDecodeError, RunStop) as exc:
         print(f"PHASE5_BENCHMARK_FAIL {exc}", file=sys.stderr, flush=True)

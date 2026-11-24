@@ -1,6 +1,6 @@
 # 训练方案
 
-最后更新：2026-10-23。状态：**SFT 6 step smoke 已完成，gate 为 `incomparable`。SFT `1e-5` run `20261015T234939_sft_06b_zh_seed42` 选出 step 30，release `sft_06b_zh_20261015T234939_step000030` 已由独立进程读回 2500 条全部一致（`status=published`、`publishable=true`）。DPO 纯方案 1 run `20261022T133007_dpo_06b_zh_seed42`（`configs/train/dpo_pilot_edit1_anchor_step40_h100.yaml`）已在 Step 40 以 `status=completed` / `reason=max_steps`（零 `gate_risk`）通过全部四次 2500 条 val 门禁，选出 `step_000040`（`latest_step == selected_step == 40`，四退化场景净减 11 个编辑，preference `0.644068`）。本轮推进 `train/dpo_release.py` 对 `dpo_06b_zh_20261022T133007_step000040` 做不可变封包与 2500 条 val 读回校验，并同步落地 Phase 4 RL（`group_pg_mixed_v1`）训练器与配置。test 仍封存。WER 仍为 null，Phase 2/3/4 不因此标完成。**
+最后更新：2026-11-24。状态：**Phase 0–5 与 Phase 6 Track 1/2 全部闭环，当前进入 Phase 6 Track 3（OpenSLR 28 物理 RIR/噪声增强 + `profile: scale` 并发多 A100 后训练链路与配对源簇 Bootstrap 数学期望门禁）。历史 Phase 2–4 的 `profile: pilot` 冻结配置、哈希与已发布 release 保持只读不变。**
 
 ## 背景与范围
 
@@ -821,6 +821,33 @@ chosen 固定是 manifest 的原文，`chosen_cer` 为 0。rejected 是 `predict
 验收：本地单元测试全部通过；在标准 A100 会话上完成 2500 条封存 `test.jsonl` 的四阶段（Base / SFT / DPO / RL）完整评测，产出 `benchmark_summary.json`、`run_report.md` 及各阶段 `metrics.json`/`scored.jsonl`，Drive 读回 SHA-256 100% 一致，并将真实 `test` 指标同步至 `00_progress.md` 与 `12_phase2_run_log.md`。（2026-10-26 已由 run `20261026T101800_phase5_test_06b_zh_seed42` 在标准 A100 上完成：`PHASE5_DONE rc=0`、`sync=synced`，封存 `test.jsonl` 总编辑数为 Base `2220` / SFT `2204` / DPO `2200` / RL `2213`。）
 
 影响：完成 Phase 5 封存 `test.jsonl` 终局对比与主 Colab 编排 notebook 交付，保持历史训练 run 与已发布 release 只读。
+
+## Phase 6 Track 3：SLR28 物理增强 `profile: scale` 全链路与多 A100 并发合同（2026-11-24）
+
+背景：Phase 6 Track 2 的 AliMeeting Eval 真实会议评测证明，Phase 2–4 在近讲 `near_field` 上正向泛化（`356 → 351` 字编辑），但真实远场 `far_field`（`8.21%` CER，重混响会议室 `10.91%`）未能跑赢 Base；主要根因包括：（1）Phase 1 合成 `reverb`/`far_field` 退化过轻（`~1.8%` CER），有效声学纠错样本稀疏；（2）SFT 训练中混入无声学支撑的 `dropout` 静音段，迫使解码器靠先验补字；（3）小样本 pilot 步数与对数偏少，配对源簇 Bootstrap 95% 置信区间跨零。Track 3 切换至 OpenSLR 28 物理 RIR/噪声增强清单（`phase6-slr28-phys-v1`），并利用 `sub2` 池的两个 Colab ADC 账号（`[3]` 752 CU + `[4]` 792 CU，最高 10 路并发 A100）全速推进 `Base → SFT → DPO → RL → 封存 Test + AliMeeting OOD`。
+
+范围：
+- 在 `train/sft_schema.py`、`train/train_sft.py` 新增可选 `data.train_scenarios`（默认 `null` 时对历史配置语义哈希零改动；设为 `[clean, noise, reverb, far_field]` 时 SFT 仅在具备物理声学支撑的四类场景上监督，同时在全部 2500 条含 `dropout` 的 `val.jsonl` 上执行完整门禁与安全评测）。
+- 在 `train/sft_schema.py`、`train/dpo_schema.py`、`train/rl_schema.py`、`train/train_sft.py`、`train/train_dpo.py`、`train/train_rl.py` 与 `train/{sft,dpo,rl}_release.py` 中正式启用 `profile: scale`：保持历史 `profile: pilot` 全部硬编码约束与哈希 100% 不变；`profile: scale` 强制执行同等严格的基线/父版本/Drive 根/全量 `val` 门禁、`keep_last >= save_points` 与独立进程 2500 条读回发布合同，同时允许 Track 3 绑定新的已发布 Track 3 SFT/DPO release 与受界超参 sweep（`learning_rate`、`max_steps`、`scheduler_max_steps`、`gradient_accumulation_steps`、`beta`、`kl_beta`、`max_edit_count`、`dropout_anchor_weight`）。
+- 在 `scripts/run_phase5_test_benchmark.py` 与 `scripts/run_alimeeting_ood_benchmark.py` 支持 `--allow-any-published-releases` 与 `--test-manifest-sha256`（仅用于 Track 3 新的封存测试集与 Track 3 已发布 SFT/DPO/RL release，仍强制校验 `status == "published"`、`publishable == true`、完整谱系和统一 `decode.eval` 哈希 `4a4fee2b67884438faa196909749fcc8dcc6126b175554ad19992bf9b4f2f642`）。
+
+设计：
+1. **单卡确定性与多卡并发编排**：
+   - 每个训练进程严格保持 `world_size: 1`、`dtype: bfloat16`、`tf32: false`、`deterministic_algorithms: true`、`decode.eval` greedy。
+   - 并发提速通过两类确定性并行在 `sub2` 账号 `[3]` 和 `[4]`（至多 10 路 A100）上展开：
+     - **独立配置并发 Sweep**：SFT、DPO、RL 阶段同时启动多组正交超参/消融配置（不同 `run_id` 与隔离输出目录），每组独立过完整 2500 条 `val` 门禁与数学期望检验，择优发布唯一不可变 release。
+     - **确定性分片推理与参考打分**：因 `eval_batch_size: 1` 且 greedy 解码逐样本独立，Base 2500 条 `val` 推理、SFT 19,685 条 `train` 假设生成与离线 reference logprob 计算可按 `sample_id` 顺序切片在多张 A100 上并行执行，合并后严格核对行数、顺序、重叠抽检零差异与 `max_abs <= 1e-4`（`0.0`）。
+2. **每阶段双层验收（硬门禁 + 数学期望）**：
+   - **硬门禁**：沿用 `degraded_macro_increase_max: 0.0`、`clean_cer_increase_max: 0.01`、`clean_cer_increase_vs_base_max: 0.02`、单场景不回退超 `0.01`、健康度（空/重复/超长/截断）`<= 0.01`、`valid_output_rate >= 0.99`；DPO 额外要求 `preference_accuracy >= 0.55`（严格 `> 0.5`）；RL 额外要求 `raw_kl <= 0.001`、`reference_matched == true`、`reward_delta_vs_step0 >= min_reward_improvement`。
+   - **数学期望检验（`evaluation/math_expectation.py`）**：每阶段除点估计门禁外，必须对选出 checkpoint 相对 Base 及相对父版本在 500 个独立 `source_utterance_id` 簇上做 `B = 2000` 次配对 Bootstrap（`seed = 42`），计算 $\mathbb{E}[\Delta \text{CER}]$、$\mathbb{E}[\Delta \text{WER}]$、$\mathbb{E}[\Delta R]$、95% CI 与胜率 $P(\Delta \text{CER} < 0)$，写出 `math_expectation_vs_base.json` 与 `math_expectation_vs_parent.json` 并归档 Drive。
+3. **全周期 GCP Google Drive 归档**：
+   - 训练中每步 checkpoint、评测决策与最终产物先落本地与 `sub2`，再通过 `scripts/gcp_drive_sync.py` 上传至 `MyDrive/qwen3-asr/{data,runs,dpo,releases}/` 并做 MD5/字节数读回校验，杜绝跨账号数据分散或写入其他项目。
+
+测试：`python3 -m unittest discover -s tests -v`。新增覆盖 `sft_schema` `data.train_scenarios` 与 `profile: scale`、`dpo_schema` / `rl_schema` `profile: scale` 预算与任意已发布父 release 校验、`{sft,dpo,rl}_release` `scale` 封包与读回、`evaluation/math_expectation.py` 配对源簇 Bootstrap 精确性，同时保证既有 138 项历史合同测试 100% 通过。
+
+验收：本地全部合同测试退出码 0；Track 3 `Base → SFT → DPO → RL` 各阶段在 A100 上完成 smoke/恢复与 `scale` 并发训练、通过硬门禁 + 数学期望检验 + 2500 条独立读回发布；最终在 Track 3 封存 `test.jsonl` 与只读 `AliMeeting Eval`（重点看真实 `far_field` 逆转回退并取得负期望 $\mathbb{E}[\Delta \text{CER}_{\text{far\_field}}] < 0$）完成终局评测并全量归档至 `MyDrive/qwen3-asr/`。
+
+影响：完全兼容既有 Phase 0–5 与 Phase 6 Track 1/2 全部配置、哈希和单测，为 Track 3 物理增强多 A100 全速闭环提供统一训练与发布基础设施。
 
 ## 影响与未验证项
 

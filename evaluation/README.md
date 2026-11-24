@@ -10,6 +10,7 @@
 - `jsonl_io.py`：UTF-8 JSONL 读写。空行跳过，坏行带行号失败。
 - `zh_cer.py`：`zh-cer-v1` 归一化、字符与词级 Levenshtein 编辑距离、空/重复/超长/截断标志，以及隔离并校验版本与内置 `dict.txt` SHA-256 的 `load_jieba_tokenizer` 和词级评分 `score_wer_pair`。`align_edits` 单独回溯替换、删除和插入，不改变 `score_pair` 的字段。
 - `eval_cer.py`：按 `sample_id` 对齐 manifest 和预测，写出 `metrics.json`、`scored.jsonl` 和 `by_scenario.csv`。当配置锁定 `wer_tokenizer: "jieba"`（`version="0.42.1"`、`dict.txt` SHA-256 `7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8`、`HMM=false`）时同步输出逐样本与分场景中文 WER（`wer`/`micro_wer`/`macro_wer`）；当 `wer_tokenizer` 为 `null` 时输出 schema 与历史完全一致。
+- `math_expectation.py`：配对源簇 Bootstrap（默认 `B=2000`、`seed=42`）数学期望与统计门禁评估器，输出 $\mathbb{E}[\Delta \text{CER}]$、$\mathbb{E}[\Delta \text{WER}]$、$\mathbb{E}[\Delta R]$、95% CI、胜率 $P(\Delta < 0)$ 及 `passed_expectation` 裁决 JSON（schema `qwen3-asr-math-expectation-v1`）。
 
 `verify_gate.py` 仍未实现。阶段门禁要等 val 行数和父版本 baseline 都存在后再写，不能用两行 smoke 冒充 `passed`。
 

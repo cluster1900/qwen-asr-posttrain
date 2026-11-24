@@ -1,0 +1,54 @@
+# Phase 6 Track 3 physical RIR + real-noise manifest config.
+# Uses the exact same audited AISHELL-1 official speaker split (3937 train / 500 dev / 500 test,
+# 340/40/20 disjoint speakers) and replaces Phase 1 weak DSP comb/lowpass filters with
+# OpenSLR 28 (Apache-2.0) real + simulated room RIRs and real point-source/isotropic noises,
+# strictly partitioned by physical room family and noise ID across train/val/test.
+schema_version: qwen3-asr-data-v2
+seed: 42
+source_version: aishell1-openslr33-slr28-track3-20261124
+audited: true
+audio_processor_version: phase6-slr28-phys-v1
+language: zh
+sample_rate: 16000
+duration_seconds:
+  min: 0.5
+  max: 30.0
+splits:
+  val: 0.1
+  test: 0.1
+quota:
+  min_val_rows_per_scenario: 50
+scenarios:
+  - clean
+  - noise
+  - reverb
+  - far_field
+  - dropout
+slr28:
+  archive_name: rirs_noises.zip
+  archive_sha256: 3b50cfde915b3984738169b4beb341e9f6b8062ae4c2076146c5db71c2c05dc7
+  license: Apache-2.0
+  split_fractions:
+    val: 0.1
+    test: 0.1
+  max_rir_seconds: 1.5
+  direct_peak_pre_samples: 16
+augmentation:
+  noise:
+    snr_db_min: 0.0
+    snr_db_max: 10.0
+    isotropic_prob: 0.25
+  reverb:
+    real_rir_prob: 0.35
+    sim_room_sizes: [mediumroom, largeroom]
+  far_field:
+    real_rir_prob: 0.35
+    sim_room_sizes: [mediumroom, largeroom]
+    snr_db_min: 3.0
+    snr_db_max: 12.0
+    isotropic_prob: 0.50
+    gain_min: 0.35
+    gain_max: 0.75
+  dropout:
+    start_ratio: 0.4
+    width_ratio: 0.15

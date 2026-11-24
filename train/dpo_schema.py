@@ -355,6 +355,34 @@ def _check_pilot_budget(resolved: dict[str, Any]) -> None:
     _check_step30_parent(resolved)
 
 
+def _check_scale_budget(resolved: dict[str, Any]) -> None:
+    if resolved["profile"] != "scale":
+        return
+    if resolved["dpo"]["train_scenarios"] not in (
+        None,
+        NON_DROPOUT_SCENARIOS,
+        DEGRADED_NONDROPOUT_SCENARIOS,
+    ):
+        raise ValueError(
+            "DPO scale train_scenarios must be omitted, [clean, noise, reverb, far_field], or [noise, reverb, far_field]"
+        )
+    if resolved["dpo"].get("val_scenarios") not in (None, NON_DROPOUT_SCENARIOS):
+        raise ValueError("DPO scale val_scenarios must be omitted or [clean, noise, reverb, far_field]")
+    if resolved["dpo"].get("exclude_clean_identical_rejected"):
+        train_scenarios = resolved["dpo"]["train_scenarios"]
+        if train_scenarios is None or "clean" in train_scenarios:
+            raise ValueError("dpo.exclude_clean_identical_rejected requires train_scenarios without clean")
+    if resolved["dpo"].get("launch_utterance"):
+        raise ValueError("DPO scale must not record the gap-strip launch utterance")
+    parent_rel = str(resolved["model"]["parent_release"])
+    if not parent_rel.startswith("sft_06b_zh_"):
+        raise ValueError(f"DPO scale parent_release must be an SFT release id: {parent_rel}")
+    if resolved["dpo"]["parent"]["release_id"] != parent_rel:
+        raise ValueError("DPO scale parent metrics release_id must match model.parent_release")
+    if int(resolved["dpo"]["parent"]["source_step"]) < 1:
+        raise ValueError("DPO scale parent metrics source_step must be >= 1")
+
+
 def _check_probe_budget(resolved: dict[str, Any]) -> None:
     if resolved["profile"] != "dropout_probe":
         return
@@ -451,6 +479,7 @@ def load_dpo_config(path: Path) -> dict[str, Any]:
     resolved["dpo"] = parsed_dpo
     resolved["yaml_sha256"] = sha256_file(path)
     _check_pilot_budget(resolved)
+    _check_scale_budget(resolved)
     _check_probe_budget(resolved)
     return resolved
 

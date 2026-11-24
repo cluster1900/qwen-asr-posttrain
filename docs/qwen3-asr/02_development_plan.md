@@ -1,6 +1,6 @@
 # 开发计划
 
-最后更新：2026-10-30
+最后更新：2026-11-24
 
 ## 背景与范围
 
@@ -81,6 +81,14 @@
 - `configs/data/alimeeting_ood_eval.yaml`（`qwen3-asr-ood-data-v1`）声明 OpenSLR 119 `Eval_Ali.tar.gz`（`CC BY-SA 4.0`，只读 OOD 用途）的非重叠单说话人过滤、近场耳麦与 8 通道远场阵列 `ch0` 同步配对、纯中文清洗及会议轮转抽样参数（`seed: 42`、`max_paired_sources: 500`）。
 - `scripts/prepare_alimeeting_ood_eval.py` 解析 Praat `.TextGrid`，剔除多说话人重叠与语码转换片段，同步切出 `near_field` 与 `far_field` 16 kHz 单声道 PCM16 WAV，写出 `ood_eval.jsonl`、`rejected.jsonl`、`manifest.json`（`trainable: false`）与 `sha256.json`，并支持与 Google Drive `data/alimeeting_eval/v1_seed42/` 双向验签缓存。
 - `scripts/run_alimeeting_ood_benchmark.py` 联合读取 `configs/train/rl_pilot_aligned.yaml`（冻结模型/LoRA/reward 运行时）与 `configs/inference/base_eval_wer.yaml`（锁定 `zh-cer-v1` CER + `jieba==0.42.1` WER，核对 `decode_eval_sha256` 一致），校验 `ood_eval.jsonl` 全部音频哈希与三份已发布 release（`sft`、`dpo`、`rl`），按阶段与 `sample_id` 前缀续跑评测四阶段，输出含远近场退化差与 2000 次配对源簇 Bootstrap 95% CI 的 `benchmark_summary.json`、`run_report.md`、`status.json` 并同步至 Drive `runs/<run_id>/`。
+
+## Phase 6（Post-MVP）Track 3 SLR28 物理增强与数学期望门禁入口
+
+- `configs/data/manifest_slr28_track3.yaml`（`schema_version: qwen3-asr-data-v2`、`audio_processor_version: phase6-slr28-phys-v1`）声明基于 OpenSLR 28（`rirs_noises.zip`，SHA-256 `3b50cfde915b3984738169b4beb341e9f6b8062ae4c2076146c5db71c2c05dc7`）的零泄漏物理房间 RIR 与真实噪声增强参数。
+- `scripts/slr28_audio.py` 与 `scripts/build_slr28_manifest.py` 按物理房间家族与噪声录音 ID 零泄漏切分 OpenSLR 28 资产，在 `float64` 下生成 `clean`/`noise`/`reverb`/`far_field`/`dropout` 16 kHz PCM16 波形并独立校验，写出 `train.jsonl`、`val.jsonl`、`test.jsonl`、`manifest.json`、`slr28_split_audit.json` 与 `sha256.json`。
+- `scripts/gcp_drive_sync.py` 通过 GCP `gcloud` 令牌将前期/中期/后期/结论产物上传至钉死的 `MyDrive/qwen3-asr`（Folder ID `1OWJDWy_iQ1N8hZbLKQOVWhYqwCyDIr-Z`）并逐文件校验字节大小与 MD5。
+- `evaluation/math_expectation.py` 计算任意候选与基线/父版本之间的配对源簇 Bootstrap 期望（$\mathbb{E}[\Delta \text{CER}]$、$\mathbb{E}[\Delta \text{WER}]$、$\mathbb{E}[\Delta R]$、95% CI、胜率 $P(\Delta < 0)$）并输出结构化统计门禁裁决。
+- `train/{sft,dpo,rl}_schema.py`、`train/train_{sft,dpo,rl}.py` 与 `train/{sft,dpo,rl}_release.py` 支持 `profile: scale`（SFT 支持可选 `data.train_scenarios`），在 `sub2` 账号 `[3]`/`[4]`（至多 10 路并发 A100）上全速执行 Track 3 `Base → SFT → DPO → RL → 封存 Test + AliMeeting OOD` 闭环。
 
 ## 验收与影响
 

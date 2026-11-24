@@ -25,6 +25,10 @@
 - `test_rl_contract.py`：Phase 4 RL（`group_pg_mixed_v1`）确定性候选种子、单候选 reward 与 `[-1, 1]` 截断、G=4 组有效性与截断/错误整组剔除、组均值中心化 advantage、全组同分零损失（含零 KL）、`k3` 逐 token 代理 KL 与固定 step 0 前缀词表条件 `raw_kl`、零信号窗口不更新 optimizer/scheduler、reference 权重 checksum 冻结校验、组内无标点等长替换差异 token 掩码 `aligned_group_mismatch_mask`、仅非零信号 group 累积窗口、`dropout` 父版本假设锚、`configs/train/rl_smoke.yaml`/`rl_pilot.yaml`/`rl_pilot_aligned.yaml` 配置解析以及 `train/rl_release.py` 打包读回校验。不下载模型。
 - `test_phase5_benchmark.py`：Phase 5 封存 `test.jsonl` 四阶段（`base`/`sft`/`dpo`/`rl`）终局评测合同、未发布 release 拒绝、500 条 clean 测试源音频确定性重建 2500 条测试波形并与 `sha256.json` 验签（含跨架构 `noise` 缩放因子 `±8 ULP` 对齐与损坏文件拒绝）、按 `sample_id` 前缀断点续跑、`benchmark_summary.json` / `run_report.md` 汇总与 Drive 读回同步，以及 `notebooks/01_qwen3_asr_post_training_pipeline.ipynb` 主 notebook 结构合同。不下载模型。
 - `test_alimeeting_ood_benchmark.py`：Phase 6 Track 2 AliMeeting Eval 只读 OOD 数据物化与四阶段评测合同测试，覆盖 Praat TextGrid 解析、跨说话人重叠剔除、副语言/拉丁词过滤、近场单声道与远场 8 通道 `ch0` 1:1 配对切片、会议分层确定性抽样、Drive 缓存验签恢复、`trainable=true`/未发布 release/`decode_eval_sha256` 失配拒绝、四阶段 CER + 锁定 `jieba==0.42.1` WER + 配对源簇 Bootstrap 95% CI 汇总及前缀续跑。不下载模型或公开语料。
+- `test_slr28_manifest.py`：Phase 6 Track 3 OpenSLR 28 物理房间家族归并、零泄漏切分、`float64` 卷积与 SNR 混音确定性、多进程可复现构建与独立校验合同测试。不下载真实公开语料。
+- `test_math_expectation.py`：配对源簇 Bootstrap 数学期望评估器单元测试，验证显著改善、clean 回退拦截、零变化拒收与 OOD 切片自动识别。
+- `test_gcp_drive_sync.py`：GCP Google Drive 同步合同测试，验证 `qwen3-asr` 根 ID/名称强校验、路径穿越拒绝以及上传后远端字节大小与 MD5 核对（全 mock，无外部网络请求）。
+- `test_track3_scale_contracts.py`：Track 3 `profile: scale`（SFT `data.train_scenarios`、DPO/RL 绑定新发布 Track 3 父 release）及历史 `pilot` 语义哈希零漂移合同测试。
 
 ## 主要输入输出
 

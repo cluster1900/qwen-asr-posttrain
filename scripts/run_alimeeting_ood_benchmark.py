@@ -705,6 +705,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path(os.environ.get("QWEN3_ASR_DRIVE_ROOT", "/content/drive/MyDrive/qwen3-asr")),
         type=Path,
     )
+    parser.add_argument(
+        "--allow-any-published-releases",
+        action="store_true",
+        help="允许评估非 Phase 2–4 历史固定 ID 的已发布 SFT/DPO/RL release（仍强制验签 published/lineage/decode_eval_sha256）",
+    )
     return parser
 
 
@@ -723,6 +728,7 @@ def main(argv: list[str] | None = None) -> int:
             run_id=args.run_id,
             seed=args.seed,
             drive_root=args.drive_root,
+            enforce_pinned_hashes=not bool(args.allow_any_published_releases),
         )
     except (OSError, ValueError, json.JSONDecodeError, RunStop) as exc:
         print(f"OOD_BENCHMARK_FAIL {exc}", file=sys.stderr, flush=True)

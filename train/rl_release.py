@@ -165,8 +165,8 @@ def prepare_rl_release(
     if output_dir.exists():
         raise ValueError(f"release directory already exists: {output_dir}")
     config = load_rl_config(config_path)
-    if config["profile"] != "pilot":
-        raise ValueError("only a pilot RL profile can be released")
+    if config["profile"] not in {"pilot", "scale"}:
+        raise ValueError("only a pilot or scale RL profile can be released")
     if config["model"]["parent_release"] is None or config["model"]["parent_release_sha256"] is None:
         raise ValueError("RL release requires a pinned DPO parent release")
     gate = json.loads((run_dir / "gate.json").read_text(encoding="utf-8"))

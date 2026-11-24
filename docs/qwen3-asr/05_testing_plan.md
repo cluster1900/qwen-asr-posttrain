@@ -1,6 +1,6 @@
 # 测试方案
 
-最后更新：2026-10-30
+最后更新：2026-11-24
 
 ## 背景与范围
 
@@ -27,6 +27,9 @@
 | RL | 固定 G=4 候选、空/重复/截断/同 reward 组、k3 与精确条件 KL、零信号窗口、reference 冻结、组内无标点等长替换对齐与 RL release | `python3 -m unittest tests.test_rl_contract -v` | reward 分量与 `[-1, 1]` 截断、组均值中心化 advantage、同分全组零损失（含零 KL）、截断/错误整组无效、零信号窗口不推进 optimizer/scheduler、step 0 固定前缀词表条件 `raw_kl` 与 `k3_proxy_train` 区分、reference 权重 checksum 校验、组内无标点等长替换差异 token 掩码 `aligned_group_mismatch_mask`、仅非零信号组累积窗口、`dropout` 父版本假设锚、`rl_smoke.yaml`/`rl_pilot.yaml`/`rl_pilot_aligned.yaml` 解析以及 `train/rl_release.py` 打包读回正确；不下载模型 | rollout、metrics、gate、`release.json` |
 | Phase 5 终局评测 | 封存 test.jsonl、500 条 clean 重建 2500 条测试波形、四阶段候选（base/sft/dpo/rl）与主 notebook | `python3 -m unittest tests.test_phase5_benchmark -v` | 拒绝未发布 release 或错误 test.jsonl 哈希；500 条 clean 确定性生成 2500 条波形并与 `sha256.json` 零差异；四阶段顺序解码、前缀断点续跑、`benchmark_summary.json` 与 `run_report.md` 汇总及 Drive 读回一致；主 notebook JSON 与 CLI 合同通过；不下载模型 | `benchmark_summary.json`、`run_report.md` |
 | Phase 6 AliMeeting OOD 评测 | 合成多说话人 Praat TextGrid（含重叠/副语言标记/拉丁词）、近场单声道与远场 8 通道 WAV、`ood_eval.jsonl` 与四阶段（base/sft/dpo/rl）CER+WER 对比 | `python3 -m unittest tests.test_alimeeting_ood_benchmark -v` | 严格剔除重叠区间与非纯中文片段；近场耳麦与远场 `ch0` 1:1 配对切片且 `sha256.json` 一致；拒绝 `trainable=true` 或未发布 release；同时输出 `zh-cer-v1` CER、锁定 `jieba==0.42.1` WER、远近场退化差与配对源簇 Bootstrap 95% CI，支持前缀续跑与 Drive 读回；不下载模型 | `ood_eval.jsonl`、`benchmark_summary.json`、`run_report.md` |
+| Phase 6 Track 3 SLR28 物理数据 | 合成多通道实测 RIR、仿真房间 RIR 与点声源/各向同性噪声 zip 夹具 | `python3 -m unittest tests.test_slr28_manifest -v` | 房间家族与噪声录音跨 `train/val/test` 严格零交集；`float64` 卷积与混合两次构建 SHA-256 完全一致；`slr28_split_audit.json` 零泄漏；校验退出码 0；不下载公开语料 | `manifest.json`、`slr28_split_audit.json`、`sha256.json` |
+| 数学期望与 Bootstrap 统计门禁 | 合成配对 `scored.jsonl`（含显著改善、跨零波动、clean 回退与单簇异常） | `python3 -m unittest tests.test_math_expectation -v` | 按 `source_utterance_id` 聚类的 `B=2000` 配对 Bootstrap 可复现；准确计算 $\mathbb{E}[\Delta \text{CER}]$、$\mathbb{E}[\Delta \text{WER}]$、$\mathbb{E}[\Delta R]$、95% CI 与胜率 $P(\Delta < 0)$；精确裁决 `expected_improvement`、`statistically_significant_95` 与 `clean_safe` | `math_expectation.json` |
+| GCP Google Drive 统一同步 | mock Drive API 响应、路径穿越、错误根 ID 与坏 MD5 夹具 | `python3 -m unittest tests.test_gcp_drive_sync -v` | 拒绝非 `qwen3-asr` 根目录 ID 与 `..` 路径；上传后核对远端 `size` 与 `md5Checksum`，不一致即失败；不发起真实网络请求 | `drive_sync_manifest.json` |
 | Drive/恢复 | 截断 checkpoint、坏 checksum、runtime 中断 | `python3 scripts/drive_sync.py ...` | `.incoming` 不可恢复；`latest.json` 只指向完整目录；global step 不重复 | sync events、latest |
 
 ## 统一指标与门禁
@@ -67,6 +70,24 @@
 - **测试**：`python3 -m unittest tests.test_eval_cer -v` 验证锁定 `jieba` micro/macro/scenario WER、推理错误行空词计分、未知分词器拒绝、版本号不匹配拒绝、词典 SHA-256 不匹配拒绝、`configs/inference/base_eval_wer.yaml` CLI 运行及 `wer_tokenizer=null` 向后兼容。
 - **验收**：全部单元测试通过；使用 `configs/inference/base_eval_wer.yaml` 对固定 `val.jsonl`（2500 行）和封存 `test.jsonl`（2500 行）的四阶段（`base`、`sft`、`dpo`、`rl`）预测离线重算 WER，重算所得 `edit_count` 与 `micro_cer` 与已发布评测产物 100% 一致，且四阶段中文 WER 归档至运行日志与进度文档。
 - **影响**：只增量扩展可选 WER 评测配置与离线/在线评分字段，不改动任何已有 manifest、`decode_eval_sha256`、训练配置哈希或已发布 SFT/DPO/RL release。
+
+### 数学期望与配对源簇 Bootstrap 统计门禁合同（`evaluation/math_expectation.py`，2026-11-24）
+
+- **背景**：单一标量点估计差值容易受少数长尾重噪语句支配（如 Phase 5 中单条语句即可贡献 `±8` 编辑），导致 `val` 上通过点估计门禁的模型在未见集或 OOD 分布上 95% 置信区间跨零。为确保每一轮后训练不仅过硬门禁，也满足明确的数学期望收益，需要建立标准化的配对源簇统计期望检验模块。
+- **范围**：新增 `evaluation/math_expectation.py` 与 `tests/test_math_expectation.py`，供 SFT、DPO、RL 每阶段选点、Track 3 封存 `test.jsonl` 与 AliMeeting OOD 终局评测统一调用；不替代既有硬门禁，作为与硬门禁并行的第二层统计期望裁决。
+- **设计**：
+  1. **源语句簇聚合**：将参考方 `scored_ref.jsonl` 与候选方 `scored_cand.jsonl` 按 `sample_id` 严格 1:1 对齐，并按独立 `source_utterance_id` 聚类（同源语句的五类场景或近/远场配对绑定在同一簇内重抽样，避免同说话人同句多视角伪独立高估显著性）。
+  2. **配对 Bootstrap 重抽样（默认 `B = 2000`、`seed = 42`）**：对每个切片（`overall`、`clean`、`degraded_4`、`physical_degraded_3` [`noise,reverb,far_field`] 及各单场景；OOD 下为 `overall`、`near_field`、`far_field`）计算：
+     - 点估计差值 `point_delta`（`micro_cer_cand - micro_cer_ref`）、总编辑差 `edit_delta`；
+     - Bootstrap 期望 $\mathbb{E}_{\text{boot}}[\Delta \text{CER}]$、标准误 `se`、95% 百分位置信区间 `[ci95_low, ci95_high]` 与胜率 $P_{\text{boot}}(\Delta \text{CER} < 0)$；
+     - 同步计算 `reward` 差值的 $\mathbb{E}_{\text{boot}}[\Delta R]$、95% CI 与 $P_{\text{boot}}(\Delta R > 0)$，以及启用锁定 `jieba` WER 时的 $\mathbb{E}_{\text{boot}}[\Delta \text{WER}]$、95% CI 与 $P_{\text{boot}}(\Delta \text{WER} < 0)$。
+  3. **数学期望通过判定**：
+     - `expected_improvement`：目标退化切片 $\mathbb{E}_{\text{boot}}[\Delta \text{CER}] < 0$ 且 $\mathbb{E}_{\text{boot}}[\Delta R] > 0$；
+     - `strong_positive_expectation`：$P_{\text{boot}}(\Delta \text{CER} < 0) \ge \tau$（域内 Track 3 `val`/`test` 目标 $\tau = 0.95$，且力争 `ci95_high < 0`；OOD 真实远场 `far_field` 硬要求 $\mathbb{E}_{\text{boot}}[\Delta \text{CER}_{\text{far}}] < 0$ 且 $P > 0.50$，力争 $\ge 0.90$）；
+     - `clean_safe`：`clean`（或 OOD `near_field`）95% CI 上界不越过 clean 回退容限 `clean_cer_increase_max`（`0.01`）。
+- **测试**：`python3 -m unittest tests.test_math_expectation -v` 校验配对源簇聚合、固定种子复现、显著改善/跨零/退化三类合成夹具裁决以及 CLI JSON/Markdown 输出。
+- **验收**：单测全过；Track 3 每个训练阶段的选出 checkpoint 与最终封存 `test` / AliMeeting OOD 均产出 `math_expectation*.json` 并同步至 Google Drive。
+- **影响**：只读消费既有 `scored.jsonl`，不改变任何既有指标数值或历史 gate 裁决。
 
 Phase 0 的 smoke manifest 是 `manifests/phase0/smoke.jsonl`，`split` 固定为 `smoke`。它只证明一条 clean、一条 degraded 和一条失败行，不是 Phase 1 的 train/val/test，也不能拿来训练。
 

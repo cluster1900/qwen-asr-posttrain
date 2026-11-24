@@ -250,13 +250,35 @@ def load_train_config(path: Path) -> dict[str, Any]:
     data = _mapping(raw.get("data"), "data")
     _reject_unknown(
         data,
-        {"train_manifest", "val_manifest", "manifest_metadata", "max_audio_seconds", "max_transcript_tokens", "max_input_tokens", "overlength", "sampler"},
+        {
+            "train_manifest",
+            "val_manifest",
+            "manifest_metadata",
+            "max_audio_seconds",
+            "max_transcript_tokens",
+            "max_input_tokens",
+            "overlength",
+            "sampler",
+            "train_scenarios",
+        },
         "data",
     )
     if data.get("overlength") != "reject":
         raise ValueError("data.overlength must be reject")
     if data.get("sampler") != "seeded_shuffle":
         raise ValueError("data.sampler must be seeded_shuffle")
+    raw_train_scenarios = data.get("train_scenarios")
+    train_scenarios: list[str] | None = None
+    if raw_train_scenarios is not None:
+        if not isinstance(raw_train_scenarios, list) or not raw_train_scenarios:
+            raise ValueError("data.train_scenarios must be a non-empty list of scenarios")
+        seen_sc: list[str] = []
+        for item in raw_train_scenarios:
+            name = _as_str(item, "data.train_scenarios[]")
+            if name not in SCENARIOS or name in seen_sc:
+                raise ValueError(f"invalid or duplicate data.train_scenarios entry: {name}")
+            seen_sc.append(name)
+        train_scenarios = seen_sc
 
     batch = _mapping(raw.get("batch"), "batch")
     _reject_unknown(batch, {"micro_batch_size", "gradient_accumulation_steps", "eval_batch_size"}, "batch")
@@ -457,6 +479,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
             "max_input_tokens": _as_int(data.get("max_input_tokens"), "data.max_input_tokens", minimum=1),
             "overlength": "reject",
             "sampler": "seeded_shuffle",
+            **({"train_scenarios": train_scenarios} if train_scenarios is not None else {}),
         },
         "batch": {
             "micro_batch_size": 1,
@@ -510,8 +533,8 @@ def load_train_config(path: Path) -> dict[str, Any]:
     if resolved["runtime"]["shutdown_margin_minutes"] >= resolved["runtime"]["max_runtime_minutes"]:
         raise ValueError("shutdown_margin_minutes must be < max_runtime_minutes")
     save_points = resolved["train"]["max_steps"] // resolved["train"]["save_steps"]
-    if profile == "pilot" and resolved["train"]["keep_last"] < save_points:
-        raise ValueError("pilot keep_last must retain every save point")
+    if profile in {"pilot", "scale"} and resolved["train"]["keep_last"] < save_points:
+        raise ValueError(f"{profile} keep_last must retain every save point")
     if not resolved["runtime"]["gradient_checkpointing"]:
         raise ValueError("runtime.gradient_checkpointing must be true for this runner")
     resolved["decode_eval_sha256"] = sha256_text(canonical_json(decode_eval))
@@ -534,8 +557,8 @@ def _baseline_hash_fields(baseline: dict[str, Any] | None) -> dict[str, str] | N
 def _load_baseline(raw: Any, profile: str, config_path: Path) -> dict[str, Any] | None:
     """Load the pinned val baseline. Smoke may omit it. Pilot may not."""
     if raw is None:
-        if profile == "pilot":
-            raise ValueError("pilot requires baseline.metrics")
+        if profile in {"pilot", "scale"}:
+            raise ValueError(f"{profile} requires baseline.metrics")
         return None
     block = _mapping(raw, "baseline")
     _reject_unknown(block, {"metrics"}, "baseline")
@@ -605,6 +628,11 @@ def semantic_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[str, 
             "train_manifest_sha256": manifest_sha256["train"],
             "val_manifest_sha256": manifest_sha256["val"],
             "manifest_metadata_sha256": manifest_sha256["metadata"],
+            **(
+                {"train_scenarios": resolved["data"]["train_scenarios"]}
+                if resolved["data"].get("train_scenarios") is not None
+                else {}
+            ),
         },
         "batch": resolved["batch"],
         "optim": resolved["optim"],

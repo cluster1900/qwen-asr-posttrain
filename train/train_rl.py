@@ -361,18 +361,22 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             raise RunStop("failed", "DPO release_id does not match the RL config", 2)
         if release.get("adapter_sha256") != config["model"]["parent_release_sha256"]:
             raise RunStop("failed", "parent_release_sha256 does not match the published DPO adapter", 2)
-        if int(release.get("source_step", -1)) != 40:
-            raise RunStop("failed", "RL parent DPO release is not step 40", 2)
+        if int(release.get("source_step", -1)) != int(config["rl"]["parent"]["source_step"]):
+            raise RunStop(
+                "failed",
+                f"RL parent DPO release source_step {release.get('source_step')} != {config['rl']['parent']['source_step']}",
+                2,
+            )
         manifest_sha = {
             "train": sha256_file(train_manifest),
             "val": sha256_file(val_manifest),
             "metadata": sha256_file(metadata_path),
         }
         config_sha = semantic_rl_config_sha256(config, manifest_sha)
-        if config["profile"] == "pilot":
+        if config["profile"] in {"pilot", "scale"}:
             drive_root = Path(os.environ.get("QWEN3_ASR_DRIVE_ROOT", "/content/drive/MyDrive/qwen3-asr"))
             if not drive_root.is_dir():
-                raise RunStop("failed", "RL pilot requires a mounted Drive root", 2)
+                raise RunStop("failed", f"RL {config['profile']} requires a mounted Drive root", 2)
             baseline = config["baseline"]
             if manifest_sha["val"] != baseline["manifest_sha256"]:
                 raise RunStop("failed", "val manifest does not match the pinned base", 2)
@@ -1097,7 +1101,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
 
         if reference_tensors_sha256(reference_lora) != reference_sha:
             raise RunStop("failed", "reference LoRA checksum drifted at exit", 1)
-        chosen = select_sft_checkpoint(decisions) if config["profile"] == "pilot" else None
+        chosen = select_sft_checkpoint(decisions) if config["profile"] in {"pilot", "scale"} else None
         final_status = "completed" if (chosen is not None or config["profile"] == "smoke") else "gate_failed"
         gate_status = "incomparable" if config["profile"] == "smoke" else ("passed" if chosen is not None else "failed")
         write_status(run_dir, final_status, stop_reason, global_step)

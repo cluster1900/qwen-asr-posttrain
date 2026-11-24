@@ -441,8 +441,12 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             raise RunStop("failed", "release_id does not match the config", 2)
         if release.get("adapter_sha256") != config["model"]["parent_release_sha256"]:
             raise RunStop("failed", "parent_release_sha256 does not match the published adapter", 2)
-        if int(release.get("source_step", -1)) != 30:
-            raise RunStop("failed", "DPO parent release is not step 30", 2)
+        if int(release.get("source_step", -1)) != int(config["dpo"]["parent"]["source_step"]):
+            raise RunStop(
+                "failed",
+                f"DPO parent release source_step {release.get('source_step')} != {config['dpo']['parent']['source_step']}",
+                2,
+            )
         metadata_sha = _check_metadata(resolve_from_repo(Path(config["dpo"]["pair_metadata"])), config, release)
         if args.null_pairs_dir is not None:
             _check_null_pairs(resolve_from_repo(args.null_pairs_dir), config)
@@ -456,7 +460,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             "reference_cache": config["dpo"]["reference_cache_sha256"],
         }
         config_sha = semantic_dpo_config_sha256(config, manifest_sha)
-        if config["profile"] in {"pilot", "dropout_probe"}:
+        if config["profile"] in {"pilot", "scale", "dropout_probe"}:
             drive_root = Path(os.environ.get("QWEN3_ASR_DRIVE_ROOT", "/content/drive/MyDrive/qwen3-asr"))
             if not drive_root.is_dir():
                 raise RunStop("failed", f"{config['profile']} requires a mounted Drive root", 2)

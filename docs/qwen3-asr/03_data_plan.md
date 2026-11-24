@@ -1,6 +1,6 @@
 # 数据方案
 
-最后更新：2026-10-30
+最后更新：2026-11-24
 
 ## 背景与范围
 
@@ -151,5 +151,31 @@ P9 的 50 条只覆盖本机已解压的 train `S0002`、`S0003`、`S0004`，而
 - **测试**：`python3 -m unittest tests.test_alimeeting_ood_benchmark -v` 使用合成双说话人 Praat TextGrid 与近场单声道/远场 8 通道 WAV 夹具验证重叠语音剔除、拉丁字母与标注符号过滤、近远场同步配对、确定性会议轮转抽样、`trainable=false` 只读标记及二次运行 SHA-256 一致性。
 - **验收**：夹具单测退出码 0；Colab 真实 `Eval_Ali.tar.gz` 物化后 `selected_sources >= 50`、`near_field` 与 `far_field` 行数严格 1:1 配对、全部 WAV 通过 `sha256.json` 验签且零训练泄漏。
 - **影响**：新增独立只读 OOD 数据入口，不影响 Phase 1 `manifest_mvp.yaml`、`build_manifest.py`、`manifest_validate.py` 或任何训练数据集。
+
+### Phase 6 Track 3：OpenSLR 28 实测 RIR 与真实噪声物理增强数据合同（2026-11-24）
+
+- **背景**：Phase 6 Track 2 在 AliMeeting Eval（`500` 对 = `1000` 条）上的零样本评测定位出核心 Sim-to-Real 鸿沟：Phase 1 的纯 DSP 合成 `reverb`（5-tap 梳状滤波）与 `far_field`（8-tap 滑动平均）退化过轻（测试 CER 仅 `1.81% ~ 1.88%`，几乎与 `clean` `1.81%` 一致），无法模拟真实会议室长混响尾音（如 `R8008_M8013` 远场 CER `10.91%`）与真实房间背景噪声。需要引入 **OpenSLR 28（`rirs_noises.zip`，Apache-2.0，1,311,166,223 字节，SHA-256 `3b50cfde915b3984738169b4beb341e9f6b8062ae4c2076146c5db71c2c05dc7`，61,880 个成员）** 升级训练与验证侧的物理退化通道，同时保持与 Phase 1 相同的 AISHELL-1 官方说话人切分（`3937` train / `500` val / `500` test 源语句，`340/40/20` 说话人零重叠），构成严格受控的声学物理对照实验。
+- **范围**：新增 `configs/data/manifest_slr28_track3.yaml`（`schema_version: qwen3-asr-data-v2`）、`scripts/slr28_audio.py`、`scripts/build_slr28_manifest.py` 与 `scripts/gcp_drive_sync.py`。不改动 Phase 1 冻结目录 `results/phase1_aishell_pilot_20261015/`、不触碰只读 OOD 评测集 `alimeeting_eval/v1_seed42`，仍不向 Git 提交任何 WAV 或归档音频载荷。OpenSLR 33 非商业学术研究合规边界与 OpenSLR 28 Apache-2.0 许可同时遵守。
+- **设计**：
+  1. **零泄漏物理资产切分（`slr28_split_audit.json`）**：
+     - 实测 RIR（`RIRS_NOISES/real_rirs_isotropic_noises/rir_list`，325 条 / 93 个房间标签）与关联的实测各向同性房间噪声（`noise_list`，92 条 / 10 个 `--room-linkage`）统一按规范化物理房间家族 `room_family`（剥离麦克风位置编号后缀，如 `air_binaural_meeting_0`/`_1` 归入同一家族 `air_binaural_meeting`）映射至 `train`（80%）/ `val`（10%）/ `test`（10%），保证同一物理房间的实测 RIR 与各向同性噪声只落入同一个 split。
+     - 仿真物理房间 RIR（`simulated_rirs/{smallroom,mediumroom,largeroom}/rir_list`，共 60,000 条 / 600 个独立房间）按 `room_id` 确定性分组切分（80%/10%/10%），确保 `train`/`val`/`test` 间房间集合严格两两不交。
+     - 点声源真实噪声（`pointsource_noises/noise_list`，843 条 Freesound 录音）按 `noise_id` 确定性切分（80%/10%/10%），同样严格两两不交。
+     - 所有切分哈希采用 `SHA-256(f"{seed}:{group_key}:{domain}")` 且在 `slr28_split_audit.json` 中显式断言 `train ∩ val = ∅`、`train ∩ test = ∅`、`val ∩ test = ∅`。
+  2. **物理声学退化引擎（`processor_version: phase6-slr28-phys-v1`）**：
+     - 全部重采样、通道选择、直达声峰值对齐、FFT 卷积与信噪比混合均在 `float64` 下计算，仅在写盘前统一限幅 `[-0.99, 0.99]` 并一次性量化为 16 kHz 单声道 `PCM_16` WAV，彻底消除 `float32` SIMD 跨架构尾数漂移。
+     - 五类场景定义：
+       - `clean`：原始 AISHELL-1 16 kHz 单声道干净语音（不写 `augmentation` 字段）。
+       - `noise`：从同 split 的点声源噪声 + 实测各向同性噪声池确定性抽取一条真实噪声，随机偏移循环裁切至与语音等长，按有效语音能量在 `[0.0, 10.0]` dB 区间确定性均匀采样 SNR 叠加。
+       - `reverb`：从同 split 的实测 RIR（权重 `0.35`）或仿真中/大房间 RIR（权重 `0.65`）确定性抽取一条物理房间脉冲响应，多通道 RIR 按确定性种子选定单通道，围绕直达声主峰 `max(0, argmax - 16)` 截取至多 `1.5s` 尾音并做单位 L2 能量归一化，`fftconvolve` 卷积后对齐输入 RMS 能量。
+       - `far_field`：两级真实会议室远场物理通道——先用同 split 的中/大房间或会议/走廊/阶梯类实测/仿真远场 RIR（`0.35` 实测 / `0.65` 仿真 `mediumroom`/`largeroom`）卷积形成长 RT60 混响，再叠加同 split 的真实房间各向同性/点声源背景噪声（SNR 确定性采样于 `[3.0, 12.0]` dB）并施加远场增益 `[0.35, 0.75]`，使 Base 远场难度量级对齐 AliMeeting 真实会议室。
+       - `dropout`：沿用 `[0.40, 0.55]` 内部静音抹除，作为全程零幻觉安全护栏（静音悬崖回退哨兵）。
+     - 每条退化行在 `augmentation` 中记录 `type`、`processor_version: "phase6-slr28-phys-v1"`、所用 `rir_id`/`rir_room_family`、`noise_id`/`noise_group`、`snr_db`、`gain` 与派生 `seed`，全程可追溯。
+  3. **GCP Google Drive 统一持久化合同（`scripts/gcp_drive_sync.py`）**：
+     - 通过 GCP `gcloud auth print-access-token --account hawk.wu4@gmail.com` 访问 Google Drive v3 API，强制钉死工程根目录 `MyDrive/qwen3-asr`（Folder ID `1OWJDWy_iQ1N8hZbLKQOVWhYqwCyDIr-Z`）并每次启动校验远端目录名确为 `qwen3-asr`，严禁写入其他目录或项目。
+     - 前期数据落盘路径：`qwen3-asr/data/slr28/rirs_noises_v1/` 与 `qwen3-asr/data/aishell1_slr28/20261124/`；每次上传通过可恢复上传并核对远端返回的字节大小与 `md5Checksum` 与本地一致，写出同步清单 `drive_sync_manifest.json`。
+- **测试**：`python3 -m unittest tests.test_slr28_manifest tests.test_gcp_drive_sync tests.test_directory_readmes -v`。使用合成 zip 夹具验证多通道 RIR 峰值对齐卷积、`float64` 确定性噪声叠加、`room_family`/`noise_id` 零跨 split 泄漏、`manifest.json`/`slr28_split_audit.json`/`sha256.json` 两次构建完全一致，以及 `gcp_drive_sync.py` 的根 ID 校验、路径穿越拒绝和 MD5 读回校验（不下载真实数据、不发起外部网络请求）。
+- **验收**：本地合同测试全部通过；真实 `results/phase6_track3_slr28_20261124/manifest/`（`19685` train / `2500` val / `2500` test）通过独立校验退出码 `0`、`slr28_split_audit.json` 零泄漏、前期音频包与清单全部同步至 `MyDrive/qwen3-asr/data/aishell1_slr28/20261124/` 且 MD5/SHA-256 100% 校验一致。
+- **影响**：新增独立 Track 3 物理增强数据流与 GCP Drive 同步工具，完全不改动 Phase 1–5 和 Track 2 的冻结清单、音频或历史哈希。
 
 采用相对路径、文件级 split、纯文本 `text` 和显式 source ID 后，旧的绝对路径 manifest、混入特殊 token 的标注和未带版本 hash 的结果不能直接复用；必须重新物化或提供迁移报告。该合同同时支持本地单测和 Colab Drive 恢复，不改变外部数据原始文件。

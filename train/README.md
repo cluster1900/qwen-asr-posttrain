@@ -7,21 +7,21 @@
 ## 当前文件清单
 
 - `README.md`：本说明文档。
-- `train_sft.py`：SFT runner。只训练解码器注意力 LoRA，loss 按监督 token 加权，`--resume` 只读 `latest.json`；评测步透传 `scoring` 可选锁定 WER 字段至 `evaluate`。
+- `train_sft.py`：SFT runner。只训练解码器注意力 LoRA，loss 按监督 token 加权，`--resume` 只读 `latest.json`；支持 `profile: pilot | scale` 与可选 `data.train_scenarios`（训练过滤而评测仍跑全量五场景）；评测步透传 `scoring` 可选锁定 WER 字段至 `evaluate`。
 - `build_sft_smoke_subset.py`：从已有 train/val manifest 抽 smoke 子集。10 个 train source、2 个 val source，每个 source 保留五类场景。
-- `sft_schema.py`：`qwen3-asr-train-v1` 解析和语义 hash，支持可选 `optim.scheduler_max_steps` 解耦余弦周期与 `train.max_steps`。未知字段会在创建 optimizer 之前拒绝。
+- `sft_schema.py`：`qwen3-asr-train-v1` 解析和语义 hash，支持可选 `optim.scheduler_max_steps` 解耦余弦周期与 `train.max_steps`、可选 `data.train_scenarios` 与 `profile: scale`。未知字段会在创建 optimizer 之前拒绝。
 - `sft_contract.py`：LoRA 名称、label mask、token 加权 loss、sampler、smoke 抽样、运行时间上限和未完成评测记录。
 - `sft_checkpoint.py`：checkpoint checksum 和 `latest.json`。`.incoming` 不能作为恢复来源。
-- `sft_release.py`：把 gate 选出的 pilot checkpoint 收成不可变 SFT release，并在新进程里核对 greedy 文本。`latest.json` 不作为 release。
+- `sft_release.py`：把 gate 选出的 `pilot` 或 `scale` checkpoint 收成不可变 SFT release，并在新进程里核对 greedy 文本。`latest.json` 不作为 release。
 - `reference_logprob.py`：用已发布 SFT adapter 给 DPO pair 的 chosen 和 rejected 计算 reference 序列 logprob。打分前去掉 SFT 的 embedding hook 并关闭 gradient checkpointing。不更新权重，不下载额外模型到测试里。
 - `dpo_contract.py`：DPO pair loss、held-out preference、长度分桶、相对 SFT 父版本和 base clean 上限的门禁、场景与无标点原位替换/去 `clean` 同音重复拷贝/最大编辑数/参考 margin 内存过滤（`aligned_substitution_only`、`exclude_clean_identical_rejected`、`max_edit_count`、`ref_margin_min`、`ref_margin_max`）、差异监督 token 掩码 `mismatched_token_mask`、确定性多样本 dropout 锚切片 `dropout_anchor_step_slice`，以及 dropout 静音段剥离 `strip_dropout_gap`。trainer 当前不调用剥离。
-- `dpo_schema.py`：解析 stage `dpo`，支持可选 `train_scenarios`、`val_scenarios`、`aligned_substitution_only`、`exclude_clean_identical_rejected`、`max_edit_count`、`loss_token_scope`、`ref_margin_min`、`ref_margin_max`、`dropout_anchor_weight`、`dropout_anchor_target`、`dropout_anchor_samples_per_step` 以及锚点停步配置的 `optim.scheduler_max_steps: 100`。SFT loader 仍拒绝非 null 的 `dpo` 块。
+- `dpo_schema.py`：解析 stage `dpo`（`profile: pilot | scale | dropout_probe`），支持可选 `train_scenarios`、`val_scenarios`、`aligned_substitution_only`、`exclude_clean_identical_rejected`、`max_edit_count`、`loss_token_scope`、`ref_margin_min`、`ref_margin_max`、`dropout_anchor_weight`、`dropout_anchor_target`、`dropout_anchor_samples_per_step` 以及 `optim.scheduler_max_steps`。SFT loader 仍拒绝非 null 的 `dpo` 块。
 - `train_dpo.py`：DPO runner。加载官方 base 和已发布 SFT adapter，用离线 reference 序列 logprob 做 pair loss，解耦训练与验证集的场景/同音/编辑数过滤，支持 `loss_token_scope: mismatched_only` 直通式差异 token 梯度反传与 `dropout_anchor_samples_per_step` 多样本锚等权平均，并在退出前将最终 `status.json`、`gate.json`、`run_report.md` 和 `listen_waiver.json` 同步到 Drive。policy 保留训练 hook。不把听音处置改成已听。
-- `dpo_release.py`：把 gate 选出的 DPO pilot checkpoint（`20261022T133007_dpo_06b_zh_seed42` 的 `step_000040`）封包为不可变 DPO release（`dpo_06b_zh_20261022T133007_step000040`），并在独立新进程中核对 2500 条 val 的 greedy 文本，一致后标为 `published`（同时保留源审计 `unlistened` 记录与源 run `gate.json` 不变）。
+- `dpo_release.py`：把 gate 选出的 DPO `pilot` 或 `scale` checkpoint 封包为不可变 DPO release，并在独立新进程中核对 2500 条 val 的 greedy 文本，一致后标为 `published`（同时保留源审计 `unlistened` 记录与源 run `gate.json` 不变）。
 - `rl_contract.py`：RL（`group_pg_mixed_v1`）确定性候选种子派生、单候选 reward 计算与 `[-1, 1]` 截断、G=4 组有效性与组均值中心化 advantage、全组同分零损失（含零 KL）、组内无标点等长替换对齐与差异 token 掩码 `aligned_group_mismatch_mask`、`k3` 逐 token 代理 KL、固定 step 0 前缀词表条件 `raw_kl`、reference 权重 tensor SHA-256 校验，以及相对 DPO 父版本/base/step 0 的 RL 门禁裁决。
-- `rl_schema.py`：解析 `stage: rl`（`profile: smoke | pilot`），校验已发布 DPO 父 release、RL 预算与语义配置 hash，支持可选对齐字段（`train_scenarios`、`loss_token_scope`、`max_edit_count`、`accumulate_signal_groups_only`、`dropout_anchor_weight`）。
+- `rl_schema.py`：解析 `stage: rl`（`profile: smoke | pilot | scale`），校验已发布 DPO 父 release、RL 预算与语义配置 hash，支持可选对齐字段（`train_scenarios`、`loss_token_scope`、`max_edit_count`、`accumulate_signal_groups_only`、`dropout_anchor_weight`）。
 - `train_rl.py`：RL runner。加载官方 base 与已发布 DPO release adapter，维护独立冻结 reference LoRA 权重并在启动/评测/保存/退出时核对 checksum（先在 `no_grad` 下执行 reference 前向再执行 policy 前向并逐候选反传），执行 `1 greedy + 3 sampled` rollout、可选声学场景过滤/组内无标点等长替换差异 token 掩码/仅非零信号 group 累积窗口/`dropout` 父版本假设锚，以及固定 step 0 前缀 `raw_kl` 与 CER/reward 门禁评测。
-- `rl_release.py`：把 gate 选出的 RL pilot checkpoint 封包为不可变 RL release（`rl_06b_zh_<timestamp>_step<selected>`），核对 `passed=true`、`risk_stop=false`、`reward_delta_vs_step0 >= min_reward_improvement`、`raw_kl <= max_raw_kl` 与 `reference_matched=true`，并在独立新进程中核对 2500 条 val 的 greedy 文本，一致后标为 `published`（同时保留 `audit_disposition: unlistened` 与源 run `gate.json` 不变）。
+- `rl_release.py`：把 gate 选出的 RL `pilot` 或 `scale` checkpoint 封包为不可变 RL release（`rl_06b_zh_<timestamp>_step<selected>`），核对 `passed=true`、`risk_stop=false`、`reward_delta_vs_step0 >= min_reward_improvement`、`raw_kl <= max_raw_kl` 与 `reference_matched=true`，并在独立新进程中核对 2500 条 val 的 greedy 文本，一致后标为 `published`（同时保留 `audit_disposition: unlistened` 与源 run `gate.json` 不变）。
 
 ## 主要输入输出
 

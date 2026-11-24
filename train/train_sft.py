@@ -822,19 +822,26 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
         val_rows = read_jsonl(val_manifest)
         validate_rows(train_rows, "train")
         validate_rows(val_rows, "val")
+        train_scenarios = config["data"].get("train_scenarios")
+        if train_scenarios is not None:
+            allowed_sc = set(train_scenarios)
+            train_rows = [r for r in train_rows if r.get("scenario") in allowed_sc]
+            if not train_rows:
+                raise RunStop("data_failed", "no train rows remain after data.train_scenarios filter", 3)
+            print(f"SFT_TRAIN_SCENARIOS {','.join(train_scenarios)} train_rows={len(train_rows)}", flush=True)
         manifest_sha = {
             "train": sha256_file(train_manifest),
             "val": sha256_file(val_manifest),
             "metadata": sha256_file(metadata_path),
         }
         config_sha = semantic_config_sha256(config, manifest_sha)
-        if config["profile"] == "pilot":
+        if config["profile"] in {"pilot", "scale"}:
             drive_root = Path(os.environ.get("QWEN3_ASR_DRIVE_ROOT", "/content/drive/MyDrive/qwen3-asr"))
             if not drive_root.is_dir():
-                raise RunStop("failed", "pilot requires a mounted Drive root", 2)
+                raise RunStop("failed", f"{config['profile']} requires a mounted Drive root", 2)
             baseline = config.get("baseline")
             if not isinstance(baseline, dict):
-                raise RunStop("failed", "pilot requires a baseline", 2)
+                raise RunStop("failed", f"{config['profile']} requires a baseline", 2)
             if manifest_sha["val"] != baseline["manifest_sha256"]:
                 raise RunStop("failed", "val manifest does not match the pinned base", 2)
             if config["decode_eval_sha256"] != baseline["decode_eval_sha256"]:
@@ -1051,7 +1058,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 pause_for_runtime(exc.record)
                 return "paused"
             log_event(run_dir, "eval_written", global_step=step)
-            if config["profile"] == "pilot":
+            if config["profile"] in {"pilot", "scale"}:
                 decision = judge_sft_checkpoint(metrics, config["baseline"], config["gate"])
                 decision["step"] = step
                 decisions.append(decision)
@@ -1219,11 +1226,11 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 return 0
         if global_step == 0 or last_saved != global_step:
             raise RunStop("failed", "run ended without a checkpoint at the last completed step", 1)
-        if config["profile"] == "pilot":
+        if config["profile"] in {"pilot", "scale"}:
             selected = select_sft_checkpoint(decisions)
             final_status = "completed" if selected is not None else "gate_failed"
             gate_status = "passed" if selected is not None else "failed"
-            note = "pilot 的 publishable 保持 false。通过的 checkpoint 还不是 release。"
+            note = f"{config['profile']} 的 publishable 保持 false。通过的 checkpoint 还不是 release。"
         else:
             selected = None
             final_status = "completed"
@@ -1275,7 +1282,7 @@ def write_gate(
     selected: dict[str, Any] | None = None,
     gate_status: str = "incomparable",
 ) -> None:
-    if config["profile"] != "pilot":
+    if config["profile"] not in {"pilot", "scale"}:
         payload = {
             "schema_version": "qwen3-asr-gate-v1",
             "status": "incomparable",
@@ -1289,7 +1296,7 @@ def write_gate(
             "schema_version": "qwen3-asr-gate-v1",
             "status": gate_status,
             "publishable": False,
-            "profile": "pilot",
+            "profile": config["profile"],
             "reason": "dirty worktree and no release readback",
             "val_manifest_sha256": val_sha,
             "baseline_sha256": config["baseline"]["sha256"],
