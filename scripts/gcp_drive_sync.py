@@ -78,8 +78,14 @@ def get_gcloud_access_token(account: str = DEFAULT_ACCOUNT) -> str:
     env_tok = os.environ.get("GCP_DRIVE_ACCESS_TOKEN", "").strip()
     if env_tok:
         return env_tok
+    env = os.environ.copy()
+    if "CLOUDSDK_PYTHON" not in env:
+        for py in ("/opt/homebrew/bin/python3", "/usr/local/bin/python3", sys.executable):
+            if Path(py).is_file():
+                env["CLOUDSDK_PYTHON"] = py
+                break
     cmd = [_find_gcloud_binary(), "auth", "print-access-token", "--account", account]
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
     if proc.returncode != 0 or not proc.stdout.strip():
         raise RuntimeError(f"gcloud token failed for {account}: {proc.stderr.strip()}")
     return proc.stdout.strip()

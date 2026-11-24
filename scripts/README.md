@@ -25,6 +25,7 @@
 - `slr28_audio.py`：Phase 6 Track 3 OpenSLR 28 物理房间脉冲响应（RIR）与真实点声源/各向同性噪声索引、按房间家族与噪声 ID 零泄漏切分及 `float64` 直达声峰值对齐 FFT 卷积与信噪比混音引擎（`phase6-slr28-phys-v1`）。
 - `build_slr28_manifest.py`：基于 `configs/data/manifest_slr28_track3.yaml` 与 `rirs_noises.zip` 构建并独立校验 Track 3 五场景物理增强 manifest，写出 `train.jsonl`、`val.jsonl`、`test.jsonl`、`rejected.jsonl`、`slr28_split_audit.json`、`manifest.json` 与 `sha256.json`。
 - `gcp_drive_sync.py`：通过 GCP `gcloud` 访问令牌执行 Google Drive v3 可恢复上传、下载与列举，强制锁定主工程目录 `MyDrive/qwen3-asr`（Folder ID `1OWJDWy_iQ1N8hZbLKQOVWhYqwCyDIr-Z`），拒绝路径穿越并逐文件核对远端字节大小与 `md5Checksum`。
+- `run_sharded_decode.py`：多 A100 确定性分片 greedy 推理与严格按 `sample_id` 顺序合并工具，复用训练/发布统一 `decode_eval_rows` 路径，支持断点续跑、锁定 `jieba` WER 评测及 `qwen3-asr-baseline-v1` 基准文件生成。
 
 `drive_sync.py` 还没有实现。checkpoint 恢复属于 Phase 2。正式配置的 `source_version` 是 `aishell1-openslr33-pilot-20261015`。
 

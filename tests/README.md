@@ -29,6 +29,7 @@
 - `test_math_expectation.py`：配对源簇 Bootstrap 数学期望评估器单元测试，验证显著改善、clean 回退拦截、零变化拒收与 OOD 切片自动识别。
 - `test_gcp_drive_sync.py`：GCP Google Drive 同步合同测试，验证 `qwen3-asr` 根 ID/名称强校验、路径穿越拒绝以及上传后远端字节大小与 MD5 核对（全 mock，无外部网络请求）。
 - `test_track3_scale_contracts.py`：Track 3 `profile: scale`（SFT `data.train_scenarios`、DPO/RL 绑定新发布 Track 3 父 release）及历史 `pilot` 语义哈希零漂移合同测试。
+- `test_sharded_decode.py`：多 A100 确定性分片边界划分、跨分片 `sample_id` 严格顺序合并、重复/缺失拦截及基准 JSON schema 单元测试。
 
 ## 主要输入输出
 
