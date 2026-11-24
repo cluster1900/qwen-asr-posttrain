@@ -55,7 +55,7 @@ from train.sft_contract import (  # noqa: E402
     should_interrupt,
     update_ends_schedule,
 )
-from train.sft_schema import SCENARIOS, sha256_file  # noqa: E402
+from train.sft_schema import SCENARIOS, resolve_environment_lock_path, sha256_file  # noqa: E402
 from train.train_sft import (  # noqa: E402
     EvalRuntimeStop,
     HorizonScheduler,
@@ -1091,9 +1091,13 @@ def main(argv: list[str] | None = None) -> int:
         config["dpo"]["reference_report"] = str(args.reference_report)
     if args.pair_metadata is not None:
         config["dpo"]["pair_metadata"] = str(args.pair_metadata)
-    lock_sha = sha256_file(ROOT / "requirements.lock")
+    lock_path = resolve_environment_lock_path(config, ROOT)
+    if not lock_path.is_file():
+        print(f"missing environment lock file: {lock_path}", file=sys.stderr)
+        return 2
+    lock_sha = sha256_file(lock_path)
     if lock_sha != config["runtime"]["environment_lock_sha256"]:
-        print("environment lock hash does not match requirements.lock", file=sys.stderr)
+        print(f"environment lock hash does not match {lock_path.name}", file=sys.stderr)
         return 2
     run_dir = resolve_from_repo(args.output_dir)
     resume_state = None

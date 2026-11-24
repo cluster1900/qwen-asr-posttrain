@@ -10,6 +10,7 @@ model:
   parent_release: null
   parent_release_sha256: null
 runtime:
+  environment_lock_file: requirements.track3.lock
   environment_lock_sha256: b4b5fc873108ea373787af85f2bd9ed0697bce0529a5d345b7a1761653b32432
   dtype: bfloat16
   world_size: 1

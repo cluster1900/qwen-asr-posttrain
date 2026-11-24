@@ -10,7 +10,7 @@ import yaml
 
 from train.dpo_schema import load_dpo_config, semantic_dpo_config_sha256
 from train.rl_schema import load_rl_config, semantic_rl_config_sha256
-from train.sft_schema import load_train_config, semantic_config_sha256
+from train.sft_schema import load_train_config, resolve_environment_lock_path, semantic_config_sha256, sha256_file
 
 
 class Track3ScaleContractsTest(unittest.TestCase):
@@ -81,6 +81,26 @@ class Track3ScaleContractsTest(unittest.TestCase):
             self.assertEqual(resolved["rl"]["parent"]["source_step"], 60)
             msha = {"train": "a" * 64, "val": "b" * 64, "metadata": "c" * 64}
             self.assertEqual(len(semantic_rl_config_sha256(resolved, msha)), 64)
+
+    def test_environment_lock_file_optional_and_track3_smoke_matches(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        legacy = load_train_config(root / "configs/train/sft_pilot_lr1e5.yaml")
+        self.assertNotIn("environment_lock_file", legacy["runtime"])
+        self.assertEqual(resolve_environment_lock_path(legacy, root), (root / "requirements.lock").resolve())
+
+        t3_smoke = load_train_config(root / "configs/train/sft_track3_smoke.yaml")
+        self.assertEqual(t3_smoke["runtime"]["environment_lock_file"], "requirements.track3.lock")
+        lock_path = resolve_environment_lock_path(t3_smoke, root)
+        self.assertEqual(lock_path, (root / "requirements.track3.lock").resolve())
+        self.assertEqual(sha256_file(lock_path), t3_smoke["runtime"]["environment_lock_sha256"])
+
+        raw = yaml.safe_load((root / "configs/train/sft_track3_smoke.yaml").read_text(encoding="utf-8"))
+        raw["runtime"]["environment_lock_file"] = "../escape.lock"
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = Path(tmp) / "bad.yaml"
+            bad.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_train_config(bad)
 
 
 if __name__ == "__main__":

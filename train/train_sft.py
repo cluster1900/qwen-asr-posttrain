@@ -63,7 +63,7 @@ from train.sft_contract import (  # noqa: E402
     select_sft_checkpoint,
     should_interrupt,
 )
-from train.sft_schema import load_train_config, semantic_config_sha256  # noqa: E402
+from train.sft_schema import load_train_config, resolve_environment_lock_path, semantic_config_sha256  # noqa: E402
 
 RUN_ID_PREFIX = "_sft_06b_zh_seed"
 LORA_TARGET_REGEX = r"^thinker\.model\.layers\.\d+\.self_attn\.(?:q_proj|k_proj|v_proj|o_proj)$"
@@ -1336,9 +1336,13 @@ def main(argv: list[str] | None = None) -> int:
         config["data"]["train_manifest"] = str(args.manifest)
     if args.val_manifest is not None:
         config["data"]["val_manifest"] = str(args.val_manifest)
-    lock_sha = sha256_file(ROOT / "requirements.lock")
+    lock_path = resolve_environment_lock_path(config, ROOT)
+    if not lock_path.is_file():
+        print(f"missing environment lock file: {lock_path}", file=sys.stderr)
+        return 2
+    lock_sha = sha256_file(lock_path)
     if lock_sha != config["runtime"]["environment_lock_sha256"]:
-        print("environment lock hash does not match requirements.lock", file=sys.stderr)
+        print(f"environment lock hash does not match {lock_path.name}", file=sys.stderr)
         return 2
     resume_state = None
     if args.resume:

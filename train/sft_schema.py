@@ -212,6 +212,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
     _reject_unknown(
         runtime,
         {
+            "environment_lock_file",
             "environment_lock_sha256",
             "dtype",
             "world_size",
@@ -229,6 +230,13 @@ def load_train_config(path: Path) -> dict[str, Any]:
         },
         "runtime",
     )
+    raw_env_lock_file = runtime.get("environment_lock_file")
+    env_lock_file: str | None = None
+    if raw_env_lock_file is not None:
+        env_lock_file = _as_str(raw_env_lock_file, "runtime.environment_lock_file")
+        p_lock = Path(env_lock_file)
+        if p_lock.is_absolute() or ".." in p_lock.parts:
+            raise ValueError(f"runtime.environment_lock_file must be a relative path inside repo: {env_lock_file}")
     if runtime.get("dtype") != "bfloat16":
         raise ValueError("runtime.dtype must be bfloat16")
     if _as_int(runtime.get("world_size"), "runtime.world_size") != 1:
@@ -444,6 +452,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
             "parent_release_sha256": None,
         },
         "runtime": {
+            **({"environment_lock_file": env_lock_file} if env_lock_file is not None else {}),
             "environment_lock_sha256": _hex(runtime.get("environment_lock_sha256"), "runtime.environment_lock_sha256", 64),
             "dtype": "bfloat16",
             "world_size": 1,
@@ -607,6 +616,19 @@ def _load_baseline(raw: Any, profile: str, config_path: Path) -> dict[str, Any] 
         "samples": _as_int(payload.get("samples"), "baseline.samples", minimum=1),
         "by_scenario": parsed_scenarios,
     }
+
+
+def resolve_environment_lock_path(config: dict[str, Any], repo_root: Path) -> Path:
+    """Resolve the pinned requirements lock path inside repo_root (default: requirements.lock)."""
+    rel = str(config["runtime"].get("environment_lock_file") or "requirements.lock")
+    rel_path = Path(rel)
+    if rel_path.is_absolute() or ".." in rel_path.parts:
+        raise ValueError(f"runtime.environment_lock_file escapes repo root: {rel}")
+    resolved = (repo_root / rel_path).resolve()
+    root = repo_root.resolve()
+    if root not in resolved.parents:
+        raise ValueError(f"runtime.environment_lock_file escapes repo root: {rel}")
+    return resolved
 
 
 def semantic_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[str, str]) -> str:
