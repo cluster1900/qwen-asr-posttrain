@@ -40,6 +40,7 @@ RL_FIELDS = {
     "max_edit_count",
     "allow_matched_punctuation",
     "accumulate_signal_groups_only",
+    "require_greedy_suboptimal",
     "dropout_anchor_weight",
 }
 
@@ -101,7 +102,7 @@ def _parse_rl_block(raw: dict[str, Any], config_path: Path) -> dict[str, Any]:
         raise ValueError("rl.kl_beta must be > 0")
     updates_per_rollout = _as_int(raw.get("updates_per_rollout"), "rl.updates_per_rollout", minimum=1, maximum=1)
     max_group_visits = _as_int(raw.get("max_group_visits"), "rl.max_group_visits", minimum=6, maximum=10000)
-    no_signal_stop_groups = _as_int(raw.get("no_signal_stop_groups"), "rl.no_signal_stop_groups", minimum=1, maximum=100)
+    no_signal_stop_groups = _as_int(raw.get("no_signal_stop_groups"), "rl.no_signal_stop_groups", minimum=1, maximum=300)
     invalid_group_rate_max = _as_float(
         raw.get("invalid_group_rate_max"),
         "rl.invalid_group_rate_max",
@@ -134,6 +135,9 @@ def _parse_rl_block(raw: dict[str, Any], config_path: Path) -> dict[str, Any]:
     raw_accum_signal = raw.get("accumulate_signal_groups_only", False)
     if not isinstance(raw_accum_signal, bool):
         raise ValueError("rl.accumulate_signal_groups_only must be a boolean")
+    raw_require_gsub = raw.get("require_greedy_suboptimal", False)
+    if not isinstance(raw_require_gsub, bool):
+        raise ValueError("rl.require_greedy_suboptimal must be a boolean")
     dropout_anchor_weight = _as_float(
         raw.get("dropout_anchor_weight", 0.0),
         "rl.dropout_anchor_weight",
@@ -153,6 +157,7 @@ def _parse_rl_block(raw: dict[str, Any], config_path: Path) -> dict[str, Any]:
         "max_edit_count": max_edit_count,
         "allow_matched_punctuation": raw_allow_punct,
         "accumulate_signal_groups_only": raw_accum_signal,
+        "require_greedy_suboptimal": raw_require_gsub,
         "dropout_anchor_weight": dropout_anchor_weight,
         "parent_metrics": parent["metrics"],
         "parent": parent,
@@ -385,6 +390,11 @@ def semantic_rl_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[st
                         else {}
                     ),
                     "accumulate_signal_groups_only": rl["accumulate_signal_groups_only"],
+                    **(
+                        {"require_greedy_suboptimal": True}
+                        if bool(rl.get("require_greedy_suboptimal", False))
+                        else {}
+                    ),
                     "dropout_anchor_weight": rl["dropout_anchor_weight"],
                 }
                 if (

@@ -109,6 +109,11 @@
 - `train/rl_track3b_w2_fp32_lr2e6_kl010_e1_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` 单字替换配置（`trainable_dtype=float32`、`lr=2e-6`、`kl_beta=0.10`、`me=1`、`anchor=0.01`、`ga=4`、`max_steps=24`、每 8 步评测）。
 - `train/rl_track3b_w2_fp32_lr2e6_kl010_ffrv_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` 远场+混响专精配置（`trainable_dtype=float32`、`train_scenarios=[far_field, reverb]`、`lr=2e-6`、`kl_beta=0.10`、`anchor=0.01`、`ga=4`、`max_steps=24`、每 8 步评测）。
 - `train/rl_track3b_w2_fp32_lr1e6_kl010_a02_ga8_e6.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` 大批量低方差配置（`trainable_dtype=float32`、`ga=8`、`lr=1e-6`、`kl_beta=0.10`、`anchor=0.02`、`me=2`、`max_steps=18`、每 6 步评测）。
+- `train/rl_track3b_w3_gsub_lr1e5_kl005_a01_e15.yaml`：Phase 6 Track 3B Stage 3 RL Wave 3 贪心纠错主配置（`trainable_dtype=float32`、`require_greedy_suboptimal=true`、`lr=1.0e-5`、`kl_beta=0.05`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=30`、每 15 步全量评测）。
+- `train/rl_track3b_w3_gsub_lr15e6_kl005_a01_e15.yaml`：Phase 6 Track 3B Stage 3 RL Wave 3 强学习率配置（`trainable_dtype=float32`、`require_greedy_suboptimal=true`、`lr=1.5e-5`、`kl_beta=0.05`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=30`、每 15 步评测）。
+- `train/rl_track3b_w3_gsub_lr2e5_kl010_a02_e12.yaml`：Phase 6 Track 3B Stage 3 RL Wave 3 高学习率+强 KL 锚定配置（`trainable_dtype=float32`、`require_greedy_suboptimal=true`、`lr=2.0e-5`、`kl_beta=0.10`、`anchor=0.02`、`me=2`、`ga=4`、`max_steps=24`、每 12 步评测）。
+- `train/rl_track3b_w3_gsub_lr1e5_kl002_e1_a01_e12.yaml`：Phase 6 Track 3B Stage 3 RL Wave 3 单字替换贪心纠错配置（`trainable_dtype=float32`、`require_greedy_suboptimal=true`、`me=1`、`lr=1.0e-5`、`kl_beta=0.02`、`anchor=0.01`、`ga=4`、`max_steps=24`、每 12 步评测）。
+- `train/rl_track3b_w3_gsub_lr12e6_kl005_ffrv_a01_e15.yaml`：Phase 6 Track 3B Stage 3 RL Wave 3 远场+混响专精配置（`trainable_dtype=float32`、`require_greedy_suboptimal=true`、`train_scenarios=[far_field, reverb]`、`lr=1.2e-5`、`kl_beta=0.05`、`anchor=0.01`、`ga=4`、`max_steps=30`、每 15 步评测）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 

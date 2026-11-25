@@ -870,6 +870,20 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                     )
                     if not aligned_info["aligned_valid"]:
                         effective_zero_adv = True
+                if not effective_zero_adv and bool(config["rl"].get("require_greedy_suboptimal", False)):
+                    cands = group_eval["candidates"]
+                    active_cands = (
+                        [cands[i] for i in aligned_info["aligned_indices"]]
+                        if aligned_info is not None
+                        else cands
+                    )
+                    greedy_cands = [c for c in cands if c.get("is_greedy")]
+                    if (
+                        not greedy_cands
+                        or not active_cands
+                        or float(greedy_cands[0]["reward"]) >= max(float(c["reward"]) for c in active_cands) - 1e-12
+                    ):
+                        effective_zero_adv = True
 
                 if effective_zero_adv:
                     consecutive_zero_signal += 1

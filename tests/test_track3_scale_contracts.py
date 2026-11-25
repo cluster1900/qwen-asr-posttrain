@@ -291,6 +291,21 @@ class Track3ScaleContractsTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_rl_config(bad_dt_p)
 
+            # Verify optional rl.require_greedy_suboptimal changes hash only when true.
+            gsub_raw = copy.deepcopy(smoke_fp32_raw)
+            gsub_raw["rl"]["require_greedy_suboptimal"] = True
+            gsub_raw["rl"]["no_signal_stop_groups"] = 250
+            gsub_p = tdir / "rl_track3_gsub.yaml"
+            gsub_p.write_text(yaml.safe_dump(gsub_raw, sort_keys=False), encoding="utf-8")
+            parsed_gsub = load_rl_config(gsub_p)
+            self.assertTrue(parsed_gsub["rl"]["require_greedy_suboptimal"])
+            self.assertEqual(parsed_gsub["rl"]["no_signal_stop_groups"], 250)
+            self.assertFalse(rl_legacy["rl"]["require_greedy_suboptimal"])
+            self.assertNotEqual(
+                semantic_rl_config_sha256(parsed_gsub, msha),
+                semantic_rl_config_sha256(parsed_fp32, msha),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
