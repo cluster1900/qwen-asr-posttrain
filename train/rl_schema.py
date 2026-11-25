@@ -180,20 +180,27 @@ def _is_aligned_rl_pilot(resolved: dict[str, Any]) -> bool:
     )
 
 
+def _is_track3_rl_smoke(resolved: dict[str, Any]) -> bool:
+    return (
+        resolved["profile"] == "smoke"
+        and resolved["runtime"].get("environment_lock_file") is not None
+    )
+
+
 def _check_rl_budget(resolved: dict[str, Any]) -> None:
     profile = resolved["profile"]
     if profile not in {"smoke", "pilot", "scale"}:
         raise ValueError("RL profile must be smoke, pilot, or scale")
-    if profile == "scale":
+    if profile == "scale" or _is_track3_rl_smoke(resolved):
         parent_rel = str(resolved["model"]["parent_release"])
         if not parent_rel.startswith("dpo_06b_zh_"):
-            raise ValueError(f"RL scale parent_release must be a DPO release id: {parent_rel}")
+            raise ValueError(f"RL {profile} parent_release must be a DPO release id: {parent_rel}")
         if resolved["rl"]["parent"]["release_id"] != parent_rel:
-            raise ValueError("RL scale parent metrics release_id must match model.parent_release")
+            raise ValueError(f"RL {profile} parent metrics release_id must match model.parent_release")
         if int(resolved["rl"]["parent"]["source_step"]) < 1:
-            raise ValueError("RL scale parent metrics source_step must be >= 1")
+            raise ValueError(f"RL {profile} parent metrics source_step must be >= 1")
         if resolved["rl"].get("loss_token_scope") == "mismatched_only" and resolved["rl"].get("max_edit_count") is None:
-            raise ValueError("RL scale mismatched_only requires rl.max_edit_count")
+            raise ValueError(f"RL {profile} mismatched_only requires rl.max_edit_count")
         return
     if _is_aligned_rl_pilot(resolved):
         expected = {
@@ -380,7 +387,11 @@ def semantic_rl_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[st
                     "accumulate_signal_groups_only": rl["accumulate_signal_groups_only"],
                     "dropout_anchor_weight": rl["dropout_anchor_weight"],
                 }
-                if (_is_aligned_rl_pilot(resolved) or resolved["profile"] == "scale")
+                if (
+                    _is_aligned_rl_pilot(resolved)
+                    or resolved["profile"] == "scale"
+                    or _is_track3_rl_smoke(resolved)
+                )
                 else {}
             ),
         },

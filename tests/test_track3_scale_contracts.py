@@ -226,6 +226,54 @@ class Track3ScaleContractsTest(unittest.TestCase):
         rl_mod["rl"]["allow_matched_punctuation"] = True
         self.assertNotEqual(semantic_rl_config_sha256(rl_mod, msha), rl_h1)
 
+        # Track 3 RL smoke with explicit environment_lock_file accepts any published DPO parent and interrupt_after_step.
+        with tempfile.TemporaryDirectory() as tmp:
+            tdir = Path(tmp)
+            parent_p = tdir / "parent_dpo.json"
+            parent_p.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "qwen3-asr-parent-metrics-v1",
+                        "split": "val",
+                        "parent": "dpo",
+                        "release_id": "dpo_06b_zh_20261125T005000_step000040",
+                        "source_step": 40,
+                        "samples": 2500,
+                        "micro_cer": 0.060,
+                        "by_scenario": {
+                            s: {"samples": 500, "micro_cer": 0.05}
+                            for s in ("clean", "noise", "reverb", "far_field", "dropout")
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            smoke_raw = yaml.safe_load(Path("configs/train/rl_pilot_aligned.yaml").read_text(encoding="utf-8"))
+            smoke_raw["profile"] = "smoke"
+            smoke_raw["model"]["parent_release"] = "dpo_06b_zh_20261125T005000_step000040"
+            smoke_raw["runtime"]["environment_lock_file"] = "requirements.track3.lock"
+            smoke_raw["runtime"]["environment_lock_sha256"] = "b4b5fc873108ea373787af85f2bd9ed0697bce0529a5d345b7a1761653b32432"
+            smoke_raw["runtime"]["max_runtime_minutes"] = 30
+            smoke_raw["runtime"]["shutdown_margin_minutes"] = 5
+            smoke_raw["train"]["max_steps"] = 6
+            smoke_raw["train"]["save_steps"] = 5
+            smoke_raw["train"]["eval_steps"] = 6
+            smoke_raw["train"]["interrupt_after_step"] = 5
+            smoke_raw["optim"]["warmup_steps"] = 2
+            smoke_raw["optim"]["scheduler_max_steps"] = None
+            smoke_raw["rl"]["allow_matched_punctuation"] = True
+            smoke_raw["rl"]["parent_metrics"] = str(parent_p)
+            smoke_p = tdir / "rl_track3_smoke.yaml"
+            smoke_p.write_text(yaml.safe_dump(smoke_raw, sort_keys=False), encoding="utf-8")
+            parsed_smoke = load_rl_config(smoke_p)
+            self.assertEqual(parsed_smoke["profile"], "smoke")
+            self.assertEqual(parsed_smoke["train"]["interrupt_after_step"], 5)
+            self.assertTrue(parsed_smoke["rl"]["allow_matched_punctuation"])
+            h_smoke = semantic_rl_config_sha256(parsed_smoke, msha)
+            parsed_smoke2 = copy.deepcopy(parsed_smoke)
+            parsed_smoke2["rl"]["allow_matched_punctuation"] = False
+            self.assertNotEqual(semantic_rl_config_sha256(parsed_smoke2, msha), h_smoke)
+
 
 if __name__ == "__main__":
     unittest.main()
