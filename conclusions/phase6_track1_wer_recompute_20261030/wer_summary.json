@@ -1,0 +1,411 @@
+{
+  "schema_version": "qwen3-asr-wer-recompute-v1",
+  "config": "configs/inference/base_eval_wer.yaml",
+  "config_sha256": "6f8bcfe2a399407d8d29b4ef7049dedc4d26c1b6e1a0457fa98a811fa3f2b613",
+  "splits": {
+    "val": {
+      "base": {
+        "edit_count": 2341,
+        "reference_char_count": 36620,
+        "micro_cer": 0.06392681594756963,
+        "macro_cer": 0.06527801794260739,
+        "word_edit_count": 2057,
+        "reference_word_count": 20655,
+        "wer": 0.09958847736625515,
+        "macro_wer": 0.10232840280634398,
+        "degraded_word_edit_count": 1859,
+        "degraded_micro_wer": 0.1125030259017187,
+        "degraded_scenario_macro_wer": 0.1125030259017187,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 165,
+            "micro_cer": 0.022528672856362644,
+            "word_edit_count": 198,
+            "reference_word_count": 4131,
+            "micro_wer": 0.04793028322440087
+          },
+          "noise": {
+            "edit_count": 439,
+            "micro_cer": 0.0599399235390497,
+            "word_edit_count": 432,
+            "reference_word_count": 4131,
+            "micro_wer": 0.10457516339869281
+          },
+          "reverb": {
+            "edit_count": 185,
+            "micro_cer": 0.0252594210813763,
+            "word_edit_count": 224,
+            "reference_word_count": 4131,
+            "micro_wer": 0.0542241587993222
+          },
+          "far_field": {
+            "edit_count": 174,
+            "micro_cer": 0.023757509557618788,
+            "word_edit_count": 208,
+            "reference_word_count": 4131,
+            "micro_wer": 0.05035100459937061
+          },
+          "dropout": {
+            "edit_count": 1378,
+            "micro_cer": 0.18814855270344075,
+            "word_edit_count": 995,
+            "reference_word_count": 4131,
+            "micro_wer": 0.24086177680948923
+          }
+        }
+      },
+      "sft": {
+        "edit_count": 2314,
+        "reference_char_count": 36620,
+        "micro_cer": 0.06318951392681595,
+        "macro_cer": 0.06448817913967599,
+        "word_edit_count": 2051,
+        "reference_word_count": 20655,
+        "wer": 0.09929799080125877,
+        "macro_wer": 0.10254486967281085,
+        "degraded_word_edit_count": 1858,
+        "degraded_micro_wer": 0.11244250786734447,
+        "degraded_scenario_macro_wer": 0.11244250786734447,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 160,
+            "micro_cer": 0.02184598580010923,
+            "word_edit_count": 193,
+            "reference_word_count": 4131,
+            "micro_wer": 0.046719922536916
+          },
+          "noise": {
+            "edit_count": 423,
+            "micro_cer": 0.057755324959038776,
+            "word_edit_count": 432,
+            "reference_word_count": 4131,
+            "micro_wer": 0.10457516339869281
+          },
+          "reverb": {
+            "edit_count": 184,
+            "micro_cer": 0.025122883670125613,
+            "word_edit_count": 226,
+            "reference_word_count": 4131,
+            "micro_wer": 0.05470830307431614
+          },
+          "far_field": {
+            "edit_count": 170,
+            "micro_cer": 0.023211359912616056,
+            "word_edit_count": 205,
+            "reference_word_count": 4131,
+            "micro_wer": 0.04962478818687969
+          },
+          "dropout": {
+            "edit_count": 1377,
+            "micro_cer": 0.18801201529219005,
+            "word_edit_count": 995,
+            "reference_word_count": 4131,
+            "micro_wer": 0.24086177680948923
+          }
+        }
+      },
+      "dpo": {
+        "edit_count": 2306,
+        "reference_char_count": 36620,
+        "micro_cer": 0.06297105406881486,
+        "macro_cer": 0.06426532833035457,
+        "word_edit_count": 2038,
+        "reference_word_count": 20655,
+        "wer": 0.09866860324376664,
+        "macro_wer": 0.1013932002311414,
+        "degraded_word_edit_count": 1842,
+        "degraded_micro_wer": 0.11147421931735657,
+        "degraded_scenario_macro_wer": 0.11147421931735657,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 163,
+            "micro_cer": 0.022255598033861276,
+            "word_edit_count": 196,
+            "reference_word_count": 4131,
+            "micro_wer": 0.04744613894940692
+          },
+          "noise": {
+            "edit_count": 417,
+            "micro_cer": 0.05693610049153468,
+            "word_edit_count": 421,
+            "reference_word_count": 4131,
+            "micro_wer": 0.1019123698862261
+          },
+          "reverb": {
+            "edit_count": 180,
+            "micro_cer": 0.024576734025122882,
+            "word_edit_count": 220,
+            "reference_word_count": 4131,
+            "micro_wer": 0.0532558702493343
+          },
+          "far_field": {
+            "edit_count": 168,
+            "micro_cer": 0.022938285090114693,
+            "word_edit_count": 202,
+            "reference_word_count": 4131,
+            "micro_wer": 0.04889857177438877
+          },
+          "dropout": {
+            "edit_count": 1378,
+            "micro_cer": 0.18814855270344075,
+            "word_edit_count": 999,
+            "reference_word_count": 4131,
+            "micro_wer": 0.24183006535947713
+          }
+        }
+      },
+      "rl": {
+        "edit_count": 2298,
+        "reference_char_count": 36620,
+        "micro_cer": 0.06275259421081376,
+        "macro_cer": 0.06408716999686175,
+        "word_edit_count": 2031,
+        "reference_word_count": 20655,
+        "wer": 0.09832970225127088,
+        "macro_wer": 0.10109583093377211,
+        "degraded_word_edit_count": 1840,
+        "degraded_micro_wer": 0.11135318324860809,
+        "degraded_scenario_macro_wer": 0.11135318324860809,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 158,
+            "micro_cer": 0.021572910977607863,
+            "word_edit_count": 191,
+            "reference_word_count": 4131,
+            "micro_wer": 0.04623577826192205
+          },
+          "noise": {
+            "edit_count": 419,
+            "micro_cer": 0.05720917531403605,
+            "word_edit_count": 424,
+            "reference_word_count": 4131,
+            "micro_wer": 0.10263858629871701
+          },
+          "reverb": {
+            "edit_count": 177,
+            "micro_cer": 0.024167121791370837,
+            "word_edit_count": 216,
+            "reference_word_count": 4131,
+            "micro_wer": 0.05228758169934641
+          },
+          "far_field": {
+            "edit_count": 165,
+            "micro_cer": 0.022528672856362644,
+            "word_edit_count": 201,
+            "reference_word_count": 4131,
+            "micro_wer": 0.048656499636891795
+          },
+          "dropout": {
+            "edit_count": 1379,
+            "micro_cer": 0.18828509011469144,
+            "word_edit_count": 999,
+            "reference_word_count": 4131,
+            "micro_wer": 0.24183006535947713
+          }
+        }
+      }
+    },
+    "test": {
+      "base": {
+        "edit_count": 2220,
+        "reference_char_count": 36710,
+        "micro_cer": 0.060473985290111686,
+        "macro_cer": 0.060121116753081356,
+        "word_edit_count": 1948,
+        "reference_word_count": 20370,
+        "wer": 0.0956308296514482,
+        "macro_wer": 0.09203006216006217,
+        "degraded_word_edit_count": 1783,
+        "degraded_micro_wer": 0.109413352970054,
+        "degraded_scenario_macro_wer": 0.109413352970054,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 133,
+            "micro_cer": 0.018114955053119042,
+            "word_edit_count": 165,
+            "reference_word_count": 4074,
+            "micro_wer": 0.04050073637702504
+          },
+          "noise": {
+            "edit_count": 518,
+            "micro_cer": 0.07055298283846363,
+            "word_edit_count": 510,
+            "reference_word_count": 4074,
+            "micro_wer": 0.1251840942562592
+          },
+          "reverb": {
+            "edit_count": 133,
+            "micro_cer": 0.018114955053119042,
+            "word_edit_count": 174,
+            "reference_word_count": 4074,
+            "micro_wer": 0.042709867452135494
+          },
+          "far_field": {
+            "edit_count": 138,
+            "micro_cer": 0.018795968400980658,
+            "word_edit_count": 177,
+            "reference_word_count": 4074,
+            "micro_wer": 0.04344624447717231
+          },
+          "dropout": {
+            "edit_count": 1298,
+            "micro_cer": 0.17679106510487605,
+            "word_edit_count": 922,
+            "reference_word_count": 4074,
+            "micro_wer": 0.226313205694649
+          }
+        }
+      },
+      "sft": {
+        "edit_count": 2204,
+        "reference_char_count": 36710,
+        "micro_cer": 0.06003813674748025,
+        "macro_cer": 0.059705128776564365,
+        "word_edit_count": 1940,
+        "reference_word_count": 20370,
+        "wer": 0.09523809523809523,
+        "macro_wer": 0.09216828171828172,
+        "degraded_word_edit_count": 1768,
+        "degraded_micro_wer": 0.10849288168875798,
+        "degraded_scenario_macro_wer": 0.10849288168875798,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 134,
+            "micro_cer": 0.018251157722691366,
+            "word_edit_count": 172,
+            "reference_word_count": 4074,
+            "micro_wer": 0.04221894943544428
+          },
+          "noise": {
+            "edit_count": 508,
+            "micro_cer": 0.0691909561427404,
+            "word_edit_count": 499,
+            "reference_word_count": 4074,
+            "micro_wer": 0.12248404516445753
+          },
+          "reverb": {
+            "edit_count": 133,
+            "micro_cer": 0.018114955053119042,
+            "word_edit_count": 172,
+            "reference_word_count": 4074,
+            "micro_wer": 0.04221894943544428
+          },
+          "far_field": {
+            "edit_count": 139,
+            "micro_cer": 0.01893217107055298,
+            "word_edit_count": 181,
+            "reference_word_count": 4074,
+            "micro_wer": 0.04442808051055474
+          },
+          "dropout": {
+            "edit_count": 1290,
+            "micro_cer": 0.17570144374829746,
+            "word_edit_count": 916,
+            "reference_word_count": 4074,
+            "micro_wer": 0.22484045164457536
+          }
+        }
+      },
+      "dpo": {
+        "edit_count": 2200,
+        "reference_char_count": 36710,
+        "micro_cer": 0.05992917461182239,
+        "macro_cer": 0.05958268234562285,
+        "word_edit_count": 1927,
+        "reference_word_count": 20370,
+        "wer": 0.09459990181639666,
+        "macro_wer": 0.0914723088023088,
+        "degraded_word_edit_count": 1763,
+        "degraded_micro_wer": 0.10818605792832597,
+        "degraded_scenario_macro_wer": 0.10818605792832597,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 129,
+            "micro_cer": 0.017570144374829746,
+            "word_edit_count": 164,
+            "reference_word_count": 4074,
+            "micro_wer": 0.04025527736867943
+          },
+          "noise": {
+            "edit_count": 515,
+            "micro_cer": 0.07014437482974667,
+            "word_edit_count": 503,
+            "reference_word_count": 4074,
+            "micro_wer": 0.12346588119783997
+          },
+          "reverb": {
+            "edit_count": 131,
+            "micro_cer": 0.017842549713974393,
+            "word_edit_count": 168,
+            "reference_word_count": 4074,
+            "micro_wer": 0.041237113402061855
+          },
+          "far_field": {
+            "edit_count": 138,
+            "micro_cer": 0.018795968400980658,
+            "word_edit_count": 175,
+            "reference_word_count": 4074,
+            "micro_wer": 0.0429553264604811
+          },
+          "dropout": {
+            "edit_count": 1287,
+            "micro_cer": 0.1752928357395805,
+            "word_edit_count": 917,
+            "reference_word_count": 4074,
+            "micro_wer": 0.22508591065292097
+          }
+        }
+      },
+      "rl": {
+        "edit_count": 2213,
+        "reference_char_count": 36710,
+        "micro_cer": 0.06028330155271043,
+        "macro_cer": 0.05985214741727664,
+        "word_edit_count": 1936,
+        "reference_word_count": 20370,
+        "wer": 0.09504172803141875,
+        "macro_wer": 0.09163474747474748,
+        "degraded_word_edit_count": 1766,
+        "degraded_micro_wer": 0.10837015218458518,
+        "degraded_scenario_macro_wer": 0.10837015218458518,
+        "by_scenario": {
+          "clean": {
+            "edit_count": 133,
+            "micro_cer": 0.018114955053119042,
+            "word_edit_count": 170,
+            "reference_word_count": 4074,
+            "micro_wer": 0.041728031418753066
+          },
+          "noise": {
+            "edit_count": 524,
+            "micro_cer": 0.07137019885589757,
+            "word_edit_count": 507,
+            "reference_word_count": 4074,
+            "micro_wer": 0.12444771723122239
+          },
+          "reverb": {
+            "edit_count": 132,
+            "micro_cer": 0.017978752383546716,
+            "word_edit_count": 168,
+            "reference_word_count": 4074,
+            "micro_wer": 0.041237113402061855
+          },
+          "far_field": {
+            "edit_count": 137,
+            "micro_cer": 0.018659765731408335,
+            "word_edit_count": 176,
+            "reference_word_count": 4074,
+            "micro_wer": 0.043200785468826705
+          },
+          "dropout": {
+            "edit_count": 1287,
+            "micro_cer": 0.1752928357395805,
+            "word_edit_count": 915,
+            "reference_word_count": 4074,
+            "micro_wer": 0.22459499263622976
+          }
+        }
+      }
+    }
+  }
+}

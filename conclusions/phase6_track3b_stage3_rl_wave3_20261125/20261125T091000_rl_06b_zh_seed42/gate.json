@@ -1,0 +1,43 @@
+{
+  "schema_version": "qwen3-asr-gate-v1",
+  "stage": "rl",
+  "status": "failed",
+  "publishable": false,
+  "profile": "scale",
+  "val_manifest_sha256": "c768edcefbbb377670b7263df9bf2c0250126ba63370632dc31cd27b4b862383",
+  "baseline_sha256": "a2279b63b1299899819c6253d7078d8b97d75aa266f04c2f99d566d9d8b03c48",
+  "parent_metrics_sha256": "5b860de339593fb78d9933e278c2ff51c58a3964449e4b4debb7327529b735e2",
+  "reference_sha256": "aad7b458b59e5bdbc060a40727634e1da7255dd3416d3e08df817b2775e7141b",
+  "step0_prefix_sha256": "3044a35528ab2f24256d3873fc586c3e1aed6be1151028b46c8ef7586e82ed3b",
+  "selected_step": null,
+  "decisions": [
+    {
+      "passed": false,
+      "risk_stop": true,
+      "risks": [
+        "degraded macro CER increased by 0.0001706717640633515"
+      ],
+      "micro_cer": 0.060841070453304204,
+      "clean_cer": 0.019661387220098307,
+      "clean_delta_vs_parent": 0.0001365374112506819,
+      "clean_delta_vs_base": -0.002867285636264337,
+      "degraded_macro_cer": 0.07113599126160568,
+      "parent_degraded_macro_cer": 0.07096531949754233,
+      "degraded_macro_delta": 0.0001706717640633515,
+      "improved_degraded_scenarios": 0,
+      "scenario_deltas": {
+        "dropout": 0.0,
+        "far_field": 0.0,
+        "noise": 0.0002730748225013638,
+        "reverb": 0.00040961223375204567
+      },
+      "step0_reward": 0.9383617879077069,
+      "mean_greedy_reward": 0.9381808842969518,
+      "reward_delta_vs_step0": -0.00018090361075506767,
+      "reward_passed": false,
+      "raw_kl": 0.00042858762921459744,
+      "reference_matched": true,
+      "step": 15
+    }
+  ]
+}

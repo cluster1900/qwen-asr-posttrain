@@ -1,0 +1,3 @@
+scenario,samples,edit_count,reference_char_count,micro_cer,macro_cer,empty_rate,repeated_rate,long_rate,truncation_rate,inference_error_rate,valid_output_rate,word_edit_count,reference_word_count,micro_wer,macro_wer
+far_field,500,661,8302,0.07961936882678873,0.09895999006135378,0.0,0.006,0.002,0.0,0.0,1.0,601,5002,0.12015193922431028,0.1438729391350366
+near_field,500,340,8302,0.04095398699108649,0.046938923471374745,0.0,0.008,0.0,0.0,0.0,1.0,338,5002,0.06757297081167533,0.07215410158051962

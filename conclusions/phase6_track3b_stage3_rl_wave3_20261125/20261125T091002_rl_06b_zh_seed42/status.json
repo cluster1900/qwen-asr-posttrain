@@ -1,0 +1,6 @@
+{
+  "status": "gate_failed",
+  "reason": "gate_risk",
+  "time": "2026-11-25T11:07:47Z",
+  "global_step": 12
+}

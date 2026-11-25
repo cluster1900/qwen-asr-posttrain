@@ -14,7 +14,8 @@
 - `09_phase0_run_log.md`：Phase 0 每次命令的脚本、退出码和结果，用来回看失败发生在哪一步。
 - `10_phase1_run_log.md`：Phase 1 manifest 构建和校验的命令、退出码和结果。
 - `11_dataset_candidates.md`：公开中文语料候选比较、官方来源、首批抽样建议与接入缺口；候选研究不代表数据审计通过。
-- `12_phase2_run_log.md`：Phase 2 SFT smoke 的命令、退出码和恢复结果。
+- `12_phase2_run_log.md`：Phase 2–6 全流程运行、消融、发布读回与 Stage 4 终局评测记录。
+- `13_github_full_archive.md`：私有 GitHub 仓库（`cluster1900/qwen-asr-posttrain`）全量数据、权重、83 次运行、日志与结论的 Releases 归档总索引及 SHA-256 校验表。
 - `00_progress.md`：当前进度、实验结果和阻塞项。
 
 ## 使用顺序

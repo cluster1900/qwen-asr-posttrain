@@ -1,0 +1,1223 @@
+{
+  "schema_version": "qwen3-asr-ood-benchmark-v1",
+  "run_id": "20261030T130500_phase6_alimeeting_ood_06b_zh_seed42",
+  "split": "ood_eval",
+  "seed": 42,
+  "base_model": "Qwen/Qwen3-ASR-0.6B",
+  "base_revision": "5eb144179a02acc5e5ba31e748d22b0cf3e303b0",
+  "processor_sha256": "1b94f6ef846ce0faa88927fd8104c27831c457a69f103e6ec62fa392d315856c",
+  "eval_decode_sha256": "4a4fee2b67884438faa196909749fcc8dcc6126b175554ad19992bf9b4f2f642",
+  "normalization_version": "zh-cer-v1",
+  "wer_tokenizer_info": {
+    "name": "jieba",
+    "version": "0.42.1",
+    "dictionary_sha256": "7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8",
+    "hmm": false
+  },
+  "ood_manifest_verification": {
+    "ood_manifest_sha256": "0b73e82d1608d8a11db89cf7a039f9c57c207e5ed9647f2060cf360f5f7b07e2",
+    "manifest_meta_sha256": "72ef206d920a3863c9fd814d1a87806f5b504a94613c67a70a458c59fa219f61",
+    "dataset_name": "alimeeting_eval_openslr119",
+    "license": "CC-BY-SA-4.0",
+    "usage_policy": "read_only_ood_evaluation",
+    "trainable": false,
+    "ood_rows": 1000,
+    "paired_sources": 500,
+    "meetings": 8,
+    "speakers": 23,
+    "verified_wav_files": 1000
+  },
+  "stages": {
+    "base": {
+      "stage": "base",
+      "release_id": "base_qwen3_asr_06b",
+      "source_run_id": null,
+      "source_step": 0,
+      "adapter_sha256": "base_zero_lora",
+      "samples": 1000,
+      "edit_count": 1038,
+      "reference_char_count": 16604,
+      "micro_cer": 0.06251505661286437,
+      "macro_cer": 0.076703620069253,
+      "word_edit_count": 965,
+      "reference_word_count": 10004,
+      "micro_wer": 0.09646141543382647,
+      "macro_wer": 0.11027065137755436,
+      "far_minus_near_micro_cer": 0.03926764635027705,
+      "far_minus_near_micro_wer": 0.0509796081567373,
+      "far_minus_near_edits": 326,
+      "mean_greedy_reward": 0.919796379930747,
+      "empty_rate": 0.0,
+      "repeated_rate": 0.007,
+      "long_rate": 0.0,
+      "truncation_rate": 0.0,
+      "inference_error_rate": 0.0,
+      "valid_output_rate": 1.0,
+      "by_scenario": {
+        "near_field": {
+          "samples": 500,
+          "edit_count": 356,
+          "reference_char_count": 8302,
+          "micro_cer": 0.042881233437725846,
+          "macro_cer": 0.049966157873179706,
+          "word_edit_count": 355,
+          "reference_word_count": 5002,
+          "micro_wer": 0.07097161135545782,
+          "macro_wer": 0.07678665933168793,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.008,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        },
+        "far_field": {
+          "samples": 500,
+          "edit_count": 682,
+          "reference_char_count": 8302,
+          "micro_cer": 0.0821488797880029,
+          "macro_cer": 0.1034410822653263,
+          "word_edit_count": 610,
+          "reference_word_count": 5002,
+          "micro_wer": 0.12195121951219512,
+          "macro_wer": 0.14375464342342079,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.006,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        }
+      },
+      "by_meeting": {
+        "R8001_M8004": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 76,
+            "reference_char_count": 840,
+            "micro_cer": 0.09047619047619047,
+            "word_edit_count": 70,
+            "reference_word_count": 499,
+            "micro_wer": 0.1402805611222445
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 142,
+            "reference_char_count": 840,
+            "micro_cer": 0.16904761904761906,
+            "word_edit_count": 116,
+            "reference_word_count": 499,
+            "micro_wer": 0.23246492985971945
+          }
+        },
+        "R8003_M8001": {
+          "near_field": {
+            "samples": 59,
+            "edit_count": 36,
+            "reference_char_count": 1445,
+            "micro_cer": 0.02491349480968858,
+            "word_edit_count": 38,
+            "reference_word_count": 898,
+            "micro_wer": 0.042316258351893093
+          },
+          "far_field": {
+            "samples": 59,
+            "edit_count": 63,
+            "reference_char_count": 1445,
+            "micro_cer": 0.04359861591695502,
+            "word_edit_count": 61,
+            "reference_word_count": 898,
+            "micro_wer": 0.06792873051224944
+          }
+        },
+        "R8007_M8010": {
+          "near_field": {
+            "samples": 4,
+            "edit_count": 4,
+            "reference_char_count": 134,
+            "micro_cer": 0.029850746268656716,
+            "word_edit_count": 4,
+            "reference_word_count": 75,
+            "micro_wer": 0.05333333333333334
+          },
+          "far_field": {
+            "samples": 4,
+            "edit_count": 3,
+            "reference_char_count": 134,
+            "micro_cer": 0.022388059701492536,
+            "word_edit_count": 3,
+            "reference_word_count": 75,
+            "micro_wer": 0.04
+          }
+        },
+        "R8007_M8011": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 13,
+            "reference_char_count": 435,
+            "micro_cer": 0.029885057471264367,
+            "word_edit_count": 18,
+            "reference_word_count": 271,
+            "micro_wer": 0.06642066420664207
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 26,
+            "reference_char_count": 435,
+            "micro_cer": 0.059770114942528735,
+            "word_edit_count": 26,
+            "reference_word_count": 271,
+            "micro_wer": 0.0959409594095941
+          }
+        },
+        "R8008_M8013": {
+          "near_field": {
+            "samples": 96,
+            "edit_count": 30,
+            "reference_char_count": 1852,
+            "micro_cer": 0.016198704103671708,
+            "word_edit_count": 31,
+            "reference_word_count": 1092,
+            "micro_wer": 0.028388278388278388
+          },
+          "far_field": {
+            "samples": 96,
+            "edit_count": 202,
+            "reference_char_count": 1852,
+            "micro_cer": 0.10907127429805616,
+            "word_edit_count": 175,
+            "reference_word_count": 1092,
+            "micro_wer": 0.16025641025641027
+          }
+        },
+        "R8009_M8018": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 101,
+            "reference_char_count": 1542,
+            "micro_cer": 0.0654993514915694,
+            "word_edit_count": 96,
+            "reference_word_count": 931,
+            "micro_wer": 0.10311493018259936
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 116,
+            "reference_char_count": 1542,
+            "micro_cer": 0.07522697795071336,
+            "word_edit_count": 110,
+            "reference_word_count": 931,
+            "micro_wer": 0.11815252416756176
+          }
+        },
+        "R8009_M8019": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 64,
+            "reference_char_count": 870,
+            "micro_cer": 0.0735632183908046,
+            "word_edit_count": 62,
+            "reference_word_count": 521,
+            "micro_wer": 0.11900191938579655
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 92,
+            "reference_char_count": 870,
+            "micro_cer": 0.10574712643678161,
+            "word_edit_count": 78,
+            "reference_word_count": 521,
+            "micro_wer": 0.14971209213051823
+          }
+        },
+        "R8009_M8020": {
+          "near_field": {
+            "samples": 101,
+            "edit_count": 32,
+            "reference_char_count": 1184,
+            "micro_cer": 0.02702702702702703,
+            "word_edit_count": 36,
+            "reference_word_count": 715,
+            "micro_wer": 0.05034965034965035
+          },
+          "far_field": {
+            "samples": 101,
+            "edit_count": 38,
+            "reference_char_count": 1184,
+            "micro_cer": 0.03209459459459459,
+            "word_edit_count": 41,
+            "reference_word_count": 715,
+            "micro_wer": 0.057342657342657345
+          }
+        }
+      },
+      "predictions_sha256": "27ad48a88f3c6f3cb51c2dc64a1cd4b98e011f028a81e1c673e62904526d8932",
+      "metrics_sha256": "102f5f3a65742eb04333fadddbb745c549c6e8f2188a109b70bb376d63e20c82",
+      "scored_sha256": "03e8b99c6222c1170013792120c4bb7422e4a24b0b4a395a727450f4040977dd"
+    },
+    "sft": {
+      "stage": "sft",
+      "release_id": "sft_06b_zh_20261015T234939_step000030",
+      "source_run_id": "20261015T234939_sft_06b_zh_seed42",
+      "source_step": 30,
+      "adapter_sha256": "a185a61f54b6fd74bd5e3bfa1173e15450cfbb772731567671a928aad805096a",
+      "samples": 1000,
+      "edit_count": 1051,
+      "reference_char_count": 16604,
+      "micro_cer": 0.06329800048181161,
+      "macro_cer": 0.07811973353534718,
+      "word_edit_count": 974,
+      "reference_word_count": 10004,
+      "micro_wer": 0.09736105557776889,
+      "macro_wer": 0.1120746476974844,
+      "far_minus_near_micro_cer": 0.04083353408817153,
+      "far_minus_near_micro_wer": 0.05317872850859656,
+      "far_minus_near_edits": 339,
+      "mean_greedy_reward": 0.9188802664646527,
+      "empty_rate": 0.0,
+      "repeated_rate": 0.006,
+      "long_rate": 0.0,
+      "truncation_rate": 0.0,
+      "inference_error_rate": 0.0,
+      "valid_output_rate": 1.0,
+      "by_scenario": {
+        "near_field": {
+          "samples": 500,
+          "edit_count": 356,
+          "reference_char_count": 8302,
+          "micro_cer": 0.042881233437725846,
+          "macro_cer": 0.05004558118851851,
+          "word_edit_count": 354,
+          "reference_word_count": 5002,
+          "micro_wer": 0.07077169132347061,
+          "macro_wer": 0.07731410388413248,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.008,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        },
+        "far_field": {
+          "samples": 500,
+          "edit_count": 695,
+          "reference_char_count": 8302,
+          "micro_cer": 0.08371476752589738,
+          "macro_cer": 0.10619388588217583,
+          "word_edit_count": 620,
+          "reference_word_count": 5002,
+          "micro_wer": 0.12395041983206717,
+          "macro_wer": 0.14683519151083632,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.004,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        }
+      },
+      "by_meeting": {
+        "R8001_M8004": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 78,
+            "reference_char_count": 840,
+            "micro_cer": 0.09285714285714286,
+            "word_edit_count": 72,
+            "reference_word_count": 499,
+            "micro_wer": 0.14428857715430862
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 143,
+            "reference_char_count": 840,
+            "micro_cer": 0.17023809523809524,
+            "word_edit_count": 120,
+            "reference_word_count": 499,
+            "micro_wer": 0.24048096192384769
+          }
+        },
+        "R8003_M8001": {
+          "near_field": {
+            "samples": 59,
+            "edit_count": 37,
+            "reference_char_count": 1445,
+            "micro_cer": 0.02560553633217993,
+            "word_edit_count": 38,
+            "reference_word_count": 898,
+            "micro_wer": 0.042316258351893093
+          },
+          "far_field": {
+            "samples": 59,
+            "edit_count": 59,
+            "reference_char_count": 1445,
+            "micro_cer": 0.04083044982698962,
+            "word_edit_count": 58,
+            "reference_word_count": 898,
+            "micro_wer": 0.0645879732739421
+          }
+        },
+        "R8007_M8010": {
+          "near_field": {
+            "samples": 4,
+            "edit_count": 2,
+            "reference_char_count": 134,
+            "micro_cer": 0.014925373134328358,
+            "word_edit_count": 2,
+            "reference_word_count": 75,
+            "micro_wer": 0.02666666666666667
+          },
+          "far_field": {
+            "samples": 4,
+            "edit_count": 1,
+            "reference_char_count": 134,
+            "micro_cer": 0.007462686567164179,
+            "word_edit_count": 1,
+            "reference_word_count": 75,
+            "micro_wer": 0.013333333333333334
+          }
+        },
+        "R8007_M8011": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 13,
+            "reference_char_count": 435,
+            "micro_cer": 0.029885057471264367,
+            "word_edit_count": 18,
+            "reference_word_count": 271,
+            "micro_wer": 0.06642066420664207
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 25,
+            "reference_char_count": 435,
+            "micro_cer": 0.05747126436781609,
+            "word_edit_count": 25,
+            "reference_word_count": 271,
+            "micro_wer": 0.09225092250922509
+          }
+        },
+        "R8008_M8013": {
+          "near_field": {
+            "samples": 96,
+            "edit_count": 31,
+            "reference_char_count": 1852,
+            "micro_cer": 0.01673866090712743,
+            "word_edit_count": 31,
+            "reference_word_count": 1092,
+            "micro_wer": 0.028388278388278388
+          },
+          "far_field": {
+            "samples": 96,
+            "edit_count": 213,
+            "reference_char_count": 1852,
+            "micro_cer": 0.11501079913606911,
+            "word_edit_count": 180,
+            "reference_word_count": 1092,
+            "micro_wer": 0.16483516483516483
+          }
+        },
+        "R8009_M8018": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 99,
+            "reference_char_count": 1542,
+            "micro_cer": 0.06420233463035019,
+            "word_edit_count": 94,
+            "reference_word_count": 931,
+            "micro_wer": 0.10096670247046187
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 118,
+            "reference_char_count": 1542,
+            "micro_cer": 0.07652399481193256,
+            "word_edit_count": 112,
+            "reference_word_count": 931,
+            "micro_wer": 0.12030075187969924
+          }
+        },
+        "R8009_M8019": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 66,
+            "reference_char_count": 870,
+            "micro_cer": 0.07586206896551724,
+            "word_edit_count": 63,
+            "reference_word_count": 521,
+            "micro_wer": 0.12092130518234165
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 98,
+            "reference_char_count": 870,
+            "micro_cer": 0.11264367816091954,
+            "word_edit_count": 83,
+            "reference_word_count": 521,
+            "micro_wer": 0.15930902111324377
+          }
+        },
+        "R8009_M8020": {
+          "near_field": {
+            "samples": 101,
+            "edit_count": 30,
+            "reference_char_count": 1184,
+            "micro_cer": 0.02533783783783784,
+            "word_edit_count": 36,
+            "reference_word_count": 715,
+            "micro_wer": 0.05034965034965035
+          },
+          "far_field": {
+            "samples": 101,
+            "edit_count": 38,
+            "reference_char_count": 1184,
+            "micro_cer": 0.03209459459459459,
+            "word_edit_count": 41,
+            "reference_word_count": 715,
+            "micro_wer": 0.057342657342657345
+          }
+        }
+      },
+      "predictions_sha256": "169d8ce235e7ef46a9794960b932a7a2fff371bb545e4b69fcde0ba1eb478407",
+      "metrics_sha256": "bc282a93e016998792b92167f42417eb32bdf1e0d2a87c8871cedcf3ca5bff90",
+      "scored_sha256": "87c70407dbf4fd11049fb6b3b11d42d0d24866a600de1e519c1ecf8216e6a2ec"
+    },
+    "dpo": {
+      "stage": "dpo",
+      "release_id": "dpo_06b_zh_20261022T133007_step000040",
+      "source_run_id": "20261022T133007_dpo_06b_zh_seed42",
+      "source_step": 40,
+      "adapter_sha256": "1d28d3119385c178c4b1b9a1e52a68d134f33a9bfd3de36659290a184ba5c51a",
+      "samples": 1000,
+      "edit_count": 1046,
+      "reference_char_count": 16604,
+      "micro_cer": 0.06299686822452422,
+      "macro_cer": 0.07756105445567464,
+      "word_edit_count": 966,
+      "reference_word_count": 10004,
+      "micro_wer": 0.09656137544982007,
+      "macro_wer": 0.11078413600500463,
+      "far_minus_near_micro_cer": 0.040953986991086495,
+      "far_minus_near_micro_wer": 0.0543782487005198,
+      "far_minus_near_edits": 340,
+      "mean_greedy_reward": 0.9194389455443251,
+      "empty_rate": 0.0,
+      "repeated_rate": 0.006,
+      "long_rate": 0.0,
+      "truncation_rate": 0.0,
+      "inference_error_rate": 0.0,
+      "valid_output_rate": 1.0,
+      "by_scenario": {
+        "near_field": {
+          "samples": 500,
+          "edit_count": 353,
+          "reference_char_count": 8302,
+          "micro_cer": 0.042519874728980965,
+          "macro_cer": 0.0493108308511366,
+          "word_edit_count": 347,
+          "reference_word_count": 5002,
+          "micro_wer": 0.06937225109956018,
+          "macro_wer": 0.0748660022110308,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.008,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        },
+        "far_field": {
+          "samples": 500,
+          "edit_count": 693,
+          "reference_char_count": 8302,
+          "micro_cer": 0.08347386172006746,
+          "macro_cer": 0.10581127806021269,
+          "word_edit_count": 619,
+          "reference_word_count": 5002,
+          "micro_wer": 0.12375049980007997,
+          "macro_wer": 0.14670226979897844,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.004,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        }
+      },
+      "by_meeting": {
+        "R8001_M8004": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 77,
+            "reference_char_count": 840,
+            "micro_cer": 0.09166666666666666,
+            "word_edit_count": 71,
+            "reference_word_count": 499,
+            "micro_wer": 0.14228456913827656
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 141,
+            "reference_char_count": 840,
+            "micro_cer": 0.16785714285714284,
+            "word_edit_count": 118,
+            "reference_word_count": 499,
+            "micro_wer": 0.23647294589178355
+          }
+        },
+        "R8003_M8001": {
+          "near_field": {
+            "samples": 59,
+            "edit_count": 37,
+            "reference_char_count": 1445,
+            "micro_cer": 0.02560553633217993,
+            "word_edit_count": 38,
+            "reference_word_count": 898,
+            "micro_wer": 0.042316258351893093
+          },
+          "far_field": {
+            "samples": 59,
+            "edit_count": 58,
+            "reference_char_count": 1445,
+            "micro_cer": 0.04013840830449827,
+            "word_edit_count": 57,
+            "reference_word_count": 898,
+            "micro_wer": 0.06347438752783964
+          }
+        },
+        "R8007_M8010": {
+          "near_field": {
+            "samples": 4,
+            "edit_count": 2,
+            "reference_char_count": 134,
+            "micro_cer": 0.014925373134328358,
+            "word_edit_count": 2,
+            "reference_word_count": 75,
+            "micro_wer": 0.02666666666666667
+          },
+          "far_field": {
+            "samples": 4,
+            "edit_count": 1,
+            "reference_char_count": 134,
+            "micro_cer": 0.007462686567164179,
+            "word_edit_count": 1,
+            "reference_word_count": 75,
+            "micro_wer": 0.013333333333333334
+          }
+        },
+        "R8007_M8011": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 13,
+            "reference_char_count": 435,
+            "micro_cer": 0.029885057471264367,
+            "word_edit_count": 18,
+            "reference_word_count": 271,
+            "micro_wer": 0.06642066420664207
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 24,
+            "reference_char_count": 435,
+            "micro_cer": 0.05517241379310345,
+            "word_edit_count": 24,
+            "reference_word_count": 271,
+            "micro_wer": 0.08856088560885608
+          }
+        },
+        "R8008_M8013": {
+          "near_field": {
+            "samples": 96,
+            "edit_count": 31,
+            "reference_char_count": 1852,
+            "micro_cer": 0.01673866090712743,
+            "word_edit_count": 31,
+            "reference_word_count": 1092,
+            "micro_wer": 0.028388278388278388
+          },
+          "far_field": {
+            "samples": 96,
+            "edit_count": 214,
+            "reference_char_count": 1852,
+            "micro_cer": 0.11555075593952484,
+            "word_edit_count": 180,
+            "reference_word_count": 1092,
+            "micro_wer": 0.16483516483516483
+          }
+        },
+        "R8009_M8018": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 98,
+            "reference_char_count": 1542,
+            "micro_cer": 0.06355382619974059,
+            "word_edit_count": 90,
+            "reference_word_count": 931,
+            "micro_wer": 0.0966702470461869
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 121,
+            "reference_char_count": 1542,
+            "micro_cer": 0.07846952010376135,
+            "word_edit_count": 117,
+            "reference_word_count": 931,
+            "micro_wer": 0.12567132116004295
+          }
+        },
+        "R8009_M8019": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 65,
+            "reference_char_count": 870,
+            "micro_cer": 0.07471264367816093,
+            "word_edit_count": 61,
+            "reference_word_count": 521,
+            "micro_wer": 0.11708253358925144
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 97,
+            "reference_char_count": 870,
+            "micro_cer": 0.11149425287356322,
+            "word_edit_count": 82,
+            "reference_word_count": 521,
+            "micro_wer": 0.15738963531669867
+          }
+        },
+        "R8009_M8020": {
+          "near_field": {
+            "samples": 101,
+            "edit_count": 30,
+            "reference_char_count": 1184,
+            "micro_cer": 0.02533783783783784,
+            "word_edit_count": 36,
+            "reference_word_count": 715,
+            "micro_wer": 0.05034965034965035
+          },
+          "far_field": {
+            "samples": 101,
+            "edit_count": 37,
+            "reference_char_count": 1184,
+            "micro_cer": 0.03125,
+            "word_edit_count": 40,
+            "reference_word_count": 715,
+            "micro_wer": 0.055944055944055944
+          }
+        }
+      },
+      "predictions_sha256": "2c2c9148a86351f0be7c82e3f7a49871f5997e6f26fdb7d79b25b097b345eb19",
+      "metrics_sha256": "ebdb35e7d6a444d08bb7b1ed6fa25d25e2fad26f65aedf52f1e8ba24a5ccd697",
+      "scored_sha256": "bb7bedcb292ac856040938e6fe3e361576c08a451190d8915c8c4e625fe85a8b"
+    },
+    "rl": {
+      "stage": "rl",
+      "release_id": "rl_06b_zh_20261023T042034_step000005",
+      "source_run_id": "20261023T042034_rl_06b_zh_seed42",
+      "source_step": 5,
+      "adapter_sha256": "79df11247728f149df4999447bbcd05ae66ae5dd1c5646f48d7a9515a94ff3a2",
+      "samples": 1000,
+      "edit_count": 1047,
+      "reference_char_count": 16604,
+      "micro_cer": 0.0630570946759817,
+      "macro_cer": 0.07772065731606977,
+      "word_edit_count": 970,
+      "reference_word_count": 10004,
+      "micro_wer": 0.09696121551379448,
+      "macro_wer": 0.11169290744074414,
+      "far_minus_near_micro_cer": 0.041556251505661286,
+      "far_minus_near_micro_wer": 0.055177928828468614,
+      "far_minus_near_edits": 345,
+      "mean_greedy_reward": 0.9192793426839301,
+      "empty_rate": 0.0,
+      "repeated_rate": 0.006,
+      "long_rate": 0.0,
+      "truncation_rate": 0.0,
+      "inference_error_rate": 0.0,
+      "valid_output_rate": 1.0,
+      "by_scenario": {
+        "near_field": {
+          "samples": 500,
+          "edit_count": 351,
+          "reference_char_count": 8302,
+          "micro_cer": 0.04227896892315105,
+          "macro_cer": 0.04944163619602645,
+          "word_edit_count": 347,
+          "reference_word_count": 5002,
+          "micro_wer": 0.06937225109956018,
+          "macro_wer": 0.07600211332214192,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.008,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        },
+        "far_field": {
+          "samples": 500,
+          "edit_count": 696,
+          "reference_char_count": 8302,
+          "micro_cer": 0.08383522042881233,
+          "macro_cer": 0.10599967843611306,
+          "word_edit_count": 623,
+          "reference_word_count": 5002,
+          "micro_wer": 0.12455017992802879,
+          "macro_wer": 0.14738370155934638,
+          "empty_rate": 0.0,
+          "repeated_rate": 0.004,
+          "long_rate": 0.0,
+          "truncation_rate": 0.0
+        }
+      },
+      "by_meeting": {
+        "R8001_M8004": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 76,
+            "reference_char_count": 840,
+            "micro_cer": 0.09047619047619047,
+            "word_edit_count": 70,
+            "reference_word_count": 499,
+            "micro_wer": 0.1402805611222445
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 142,
+            "reference_char_count": 840,
+            "micro_cer": 0.16904761904761906,
+            "word_edit_count": 118,
+            "reference_word_count": 499,
+            "micro_wer": 0.23647294589178355
+          }
+        },
+        "R8003_M8001": {
+          "near_field": {
+            "samples": 59,
+            "edit_count": 37,
+            "reference_char_count": 1445,
+            "micro_cer": 0.02560553633217993,
+            "word_edit_count": 38,
+            "reference_word_count": 898,
+            "micro_wer": 0.042316258351893093
+          },
+          "far_field": {
+            "samples": 59,
+            "edit_count": 59,
+            "reference_char_count": 1445,
+            "micro_cer": 0.04083044982698962,
+            "word_edit_count": 58,
+            "reference_word_count": 898,
+            "micro_wer": 0.0645879732739421
+          }
+        },
+        "R8007_M8010": {
+          "near_field": {
+            "samples": 4,
+            "edit_count": 2,
+            "reference_char_count": 134,
+            "micro_cer": 0.014925373134328358,
+            "word_edit_count": 2,
+            "reference_word_count": 75,
+            "micro_wer": 0.02666666666666667
+          },
+          "far_field": {
+            "samples": 4,
+            "edit_count": 1,
+            "reference_char_count": 134,
+            "micro_cer": 0.007462686567164179,
+            "word_edit_count": 1,
+            "reference_word_count": 75,
+            "micro_wer": 0.013333333333333334
+          }
+        },
+        "R8007_M8011": {
+          "near_field": {
+            "samples": 18,
+            "edit_count": 13,
+            "reference_char_count": 435,
+            "micro_cer": 0.029885057471264367,
+            "word_edit_count": 18,
+            "reference_word_count": 271,
+            "micro_wer": 0.06642066420664207
+          },
+          "far_field": {
+            "samples": 18,
+            "edit_count": 22,
+            "reference_char_count": 435,
+            "micro_cer": 0.05057471264367816,
+            "word_edit_count": 23,
+            "reference_word_count": 271,
+            "micro_wer": 0.08487084870848709
+          }
+        },
+        "R8008_M8013": {
+          "near_field": {
+            "samples": 96,
+            "edit_count": 31,
+            "reference_char_count": 1852,
+            "micro_cer": 0.01673866090712743,
+            "word_edit_count": 31,
+            "reference_word_count": 1092,
+            "micro_wer": 0.028388278388278388
+          },
+          "far_field": {
+            "samples": 96,
+            "edit_count": 218,
+            "reference_char_count": 1852,
+            "micro_cer": 0.11771058315334773,
+            "word_edit_count": 186,
+            "reference_word_count": 1092,
+            "micro_wer": 0.17032967032967034
+          }
+        },
+        "R8009_M8018": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 96,
+            "reference_char_count": 1542,
+            "micro_cer": 0.0622568093385214,
+            "word_edit_count": 89,
+            "reference_word_count": 931,
+            "micro_wer": 0.09559613319011816
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 120,
+            "reference_char_count": 1542,
+            "micro_cer": 0.07782101167315175,
+            "word_edit_count": 115,
+            "reference_word_count": 931,
+            "micro_wer": 0.12352309344790548
+          }
+        },
+        "R8009_M8019": {
+          "near_field": {
+            "samples": 102,
+            "edit_count": 66,
+            "reference_char_count": 870,
+            "micro_cer": 0.07586206896551724,
+            "word_edit_count": 63,
+            "reference_word_count": 521,
+            "micro_wer": 0.12092130518234165
+          },
+          "far_field": {
+            "samples": 102,
+            "edit_count": 96,
+            "reference_char_count": 870,
+            "micro_cer": 0.1103448275862069,
+            "word_edit_count": 81,
+            "reference_word_count": 521,
+            "micro_wer": 0.15547024952015356
+          }
+        },
+        "R8009_M8020": {
+          "near_field": {
+            "samples": 101,
+            "edit_count": 30,
+            "reference_char_count": 1184,
+            "micro_cer": 0.02533783783783784,
+            "word_edit_count": 36,
+            "reference_word_count": 715,
+            "micro_wer": 0.05034965034965035
+          },
+          "far_field": {
+            "samples": 101,
+            "edit_count": 38,
+            "reference_char_count": 1184,
+            "micro_cer": 0.03209459459459459,
+            "word_edit_count": 41,
+            "reference_word_count": 715,
+            "micro_wer": 0.057342657342657345
+          }
+        }
+      },
+      "predictions_sha256": "f775493a8fd57582e822defa5c1ec8dfcdd90c2d4f00d9358c3a11b47eb644a9",
+      "metrics_sha256": "7b1d2ac9e550dd1d35684cb66537ba53403f057e17c978410eaa6419eb3a2893",
+      "scored_sha256": "193e21d5478d465b42c09e17bba82d1aae75965ad595d58d71f1ef21edaf2544"
+    }
+  },
+  "comparisons": {
+    "base": {
+      "previous_stage": "base",
+      "total_edit_delta_vs_base": 0,
+      "total_edit_delta_vs_prev": 0,
+      "micro_cer_delta_vs_base": 0.0,
+      "micro_cer_delta_vs_prev": 0.0,
+      "total_word_edit_delta_vs_base": 0,
+      "total_word_edit_delta_vs_prev": 0,
+      "micro_wer_delta_vs_base": 0.0,
+      "micro_wer_delta_vs_prev": 0.0,
+      "near_field_edit_delta_vs_base": 0,
+      "far_field_edit_delta_vs_base": 0,
+      "far_minus_near_cer_gap_delta_vs_base": 0.0,
+      "reward_delta_vs_base": 0.0,
+      "reward_delta_vs_prev": 0.0
+    },
+    "sft": {
+      "previous_stage": "base",
+      "total_edit_delta_vs_base": 13,
+      "total_edit_delta_vs_prev": 13,
+      "micro_cer_delta_vs_base": 0.0007829438689472418,
+      "micro_cer_delta_vs_prev": 0.0007829438689472418,
+      "total_word_edit_delta_vs_base": 9,
+      "total_word_edit_delta_vs_prev": 9,
+      "micro_wer_delta_vs_base": 0.0008996401439424206,
+      "micro_wer_delta_vs_prev": 0.0008996401439424206,
+      "near_field_edit_delta_vs_base": 0,
+      "far_field_edit_delta_vs_base": 13,
+      "far_minus_near_cer_gap_delta_vs_base": 0.0015658877378944835,
+      "reward_delta_vs_base": -0.000916113466094326,
+      "reward_delta_vs_prev": -0.000916113466094326
+    },
+    "dpo": {
+      "previous_stage": "sft",
+      "total_edit_delta_vs_base": 8,
+      "total_edit_delta_vs_prev": -5,
+      "micro_cer_delta_vs_base": 0.00048181161165984643,
+      "micro_cer_delta_vs_prev": -0.00030113225728739534,
+      "total_word_edit_delta_vs_base": 1,
+      "total_word_edit_delta_vs_prev": -8,
+      "micro_wer_delta_vs_base": 9.996001599360538e-05,
+      "micro_wer_delta_vs_prev": -0.0007996801279488153,
+      "near_field_edit_delta_vs_base": -3,
+      "far_field_edit_delta_vs_base": 11,
+      "far_minus_near_cer_gap_delta_vs_base": 0.0016863406408094486,
+      "reward_delta_vs_base": -0.0003574343864218843,
+      "reward_delta_vs_prev": 0.0005586790796724417
+    },
+    "rl": {
+      "previous_stage": "dpo",
+      "total_edit_delta_vs_base": 9,
+      "total_edit_delta_vs_prev": 1,
+      "micro_cer_delta_vs_base": 0.0005420380631173255,
+      "micro_cer_delta_vs_prev": 6.022645145747907e-05,
+      "total_word_edit_delta_vs_base": 5,
+      "total_word_edit_delta_vs_prev": 4,
+      "micro_wer_delta_vs_base": 0.000499800079968013,
+      "micro_wer_delta_vs_prev": 0.00039984006397440763,
+      "near_field_edit_delta_vs_base": -5,
+      "far_field_edit_delta_vs_base": 14,
+      "far_minus_near_cer_gap_delta_vs_base": 0.0022886051553842393,
+      "reward_delta_vs_base": -0.0005170372468169537,
+      "reward_delta_vs_prev": -0.00015960286039506943
+    }
+  },
+  "paired_cluster_bootstrap_95ci": {
+    "sft_vs_base": {
+      "resamples": 2000,
+      "clusters": 500,
+      "overall": {
+        "edit_delta": 13,
+        "micro_cer_delta": 0.0007829438689472417,
+        "micro_cer_ci95": [
+          -0.000355333699736122,
+          0.002039349447605727
+        ],
+        "word_edit_delta": 9,
+        "micro_wer_delta": 0.000899640143942423,
+        "micro_wer_ci95": [
+          -0.0007254224906615258,
+          0.00253258110058752
+        ]
+      },
+      "near_field": {
+        "edit_delta": 0,
+        "micro_cer_delta": 0.0,
+        "micro_cer_ci95": [
+          -0.001280581166249143,
+          0.0012533410181641469
+        ],
+        "word_edit_delta": -1,
+        "micro_wer_delta": -0.00019992003198720512,
+        "micro_wer_ci95": [
+          -0.0019317373678097553,
+          0.0013979953682148728
+        ]
+      },
+      "far_field": {
+        "edit_delta": 13,
+        "micro_cer_delta": 0.0015658877378944833,
+        "micro_cer_ci95": [
+          -0.0002375680207695161,
+          0.0034375559878180584
+        ],
+        "word_edit_delta": 10,
+        "micro_wer_delta": 0.001999200319872051,
+        "micro_wer_ci95": [
+          -0.0004070128458881411,
+          0.004526795561858
+        ]
+      }
+    },
+    "dpo_vs_base": {
+      "resamples": 2000,
+      "clusters": 500,
+      "overall": {
+        "edit_delta": 8,
+        "micro_cer_delta": 0.000481811611659841,
+        "micro_cer_ci95": [
+          -0.0007388366469713397,
+          0.0018561788256457933
+        ],
+        "word_edit_delta": 1,
+        "micro_wer_delta": 9.996001599360256e-05,
+        "micro_wer_ci95": [
+          -0.001836875691934919,
+          0.002058825023561547
+        ]
+      },
+      "near_field": {
+        "edit_delta": -3,
+        "micro_cer_delta": -0.00036135870874488076,
+        "micro_cer_ci95": [
+          -0.0017616140343633857,
+          0.0010952014020308655
+        ],
+        "word_edit_delta": -8,
+        "micro_wer_delta": -0.001599360255897641,
+        "micro_wer_ci95": [
+          -0.003921477044088415,
+          0.0005717798594847742
+        ]
+      },
+      "far_field": {
+        "edit_delta": 11,
+        "micro_cer_delta": 0.0013249819320645627,
+        "micro_cer_ci95": [
+          -0.0005955961628025128,
+          0.0032697149427777794
+        ],
+        "word_edit_delta": 9,
+        "micro_wer_delta": 0.001799280287884846,
+        "micro_wer_ci95": [
+          -0.00103375211081589,
+          0.004678891680804247
+        ]
+      }
+    },
+    "rl_vs_base": {
+      "resamples": 2000,
+      "clusters": 500,
+      "overall": {
+        "edit_delta": 9,
+        "micro_cer_delta": 0.0005420380631173212,
+        "micro_cer_ci95": [
+          -0.0007913850013838798,
+          0.001979647423964203
+        ],
+        "word_edit_delta": 5,
+        "micro_wer_delta": 0.0004998000799680128,
+        "micro_wer_ci95": [
+          -0.0014896470971853773,
+          0.0024838179788902433
+        ]
+      },
+      "near_field": {
+        "edit_delta": -5,
+        "micro_cer_delta": -0.0006022645145748012,
+        "micro_cer_ci95": [
+          -0.002001002199134094,
+          0.0008580587047306638
+        ],
+        "word_edit_delta": -8,
+        "micro_wer_delta": -0.001599360255897641,
+        "micro_wer_ci95": [
+          -0.003680815859818115,
+          0.0004029559720814265
+        ]
+      },
+      "far_field": {
+        "edit_delta": 14,
+        "micro_cer_delta": 0.0016863406408094434,
+        "micro_cer_ci95": [
+          -0.0003655810692486928,
+          0.0037643699216690927
+        ],
+        "word_edit_delta": 13,
+        "micro_wer_delta": 0.0025989604158336665,
+        "micro_wer_ci95": [
+          -0.00041459559145236546,
+          0.0057416385719866745
+        ]
+      }
+    },
+    "dpo_vs_sft": {
+      "resamples": 2000,
+      "clusters": 500,
+      "overall": {
+        "edit_delta": -5,
+        "micro_cer_delta": -0.0003011322572874006,
+        "micro_cer_ci95": [
+          -0.0009476858474355282,
+          0.0003734462681130029
+        ],
+        "word_edit_delta": -8,
+        "micro_wer_delta": -0.0007996801279488205,
+        "micro_wer_ci95": [
+          -0.002027123081651927,
+          0.00039892506869010336
+        ]
+      },
+      "near_field": {
+        "edit_delta": -3,
+        "micro_cer_delta": -0.00036135870874488076,
+        "micro_cer_ci95": [
+          -0.0013508041187651329,
+          0.0006215388817867125
+        ],
+        "word_edit_delta": -7,
+        "micro_wer_delta": -0.0013994402239104358,
+        "micro_wer_ci95": [
+          -0.0032161936898663975,
+          0.0001964996187757568
+        ]
+      },
+      "far_field": {
+        "edit_delta": -2,
+        "micro_cer_delta": -0.0002409058058299205,
+        "micro_cer_ci95": [
+          -0.0010223838303272874,
+          0.0005909136116888534
+        ],
+        "word_edit_delta": -1,
+        "micro_wer_delta": -0.00019992003198720512,
+        "micro_wer_ci95": [
+          -0.0018886951138370983,
+          0.0015961771572612078
+        ]
+      }
+    },
+    "rl_vs_dpo": {
+      "resamples": 2000,
+      "clusters": 500,
+      "overall": {
+        "edit_delta": 1,
+        "micro_cer_delta": 6.0226451457480126e-05,
+        "micro_cer_ci95": [
+          -0.0005350264064445884,
+          0.0006702453717077793
+        ],
+        "word_edit_delta": 4,
+        "micro_wer_delta": 0.00039984006397441024,
+        "micro_wer_ci95": [
+          -0.0006429832186933211,
+          0.0015866792997223686
+        ]
+      },
+      "near_field": {
+        "edit_delta": -2,
+        "micro_cer_delta": -0.0002409058058299205,
+        "micro_cer_ci95": [
+          -0.0009670098575354299,
+          0.0003724510522167552
+        ],
+        "word_edit_delta": 0,
+        "micro_wer_delta": 0.0,
+        "micro_wer_ci95": [
+          -0.0010208613515762445,
+          0.001231375771019978
+        ]
+      },
+      "far_field": {
+        "edit_delta": 3,
+        "micro_cer_delta": 0.00036135870874488076,
+        "micro_cer_ci95": [
+          -0.0005777291745834672,
+          0.0013468491968610342
+        ],
+        "word_edit_delta": 4,
+        "micro_wer_delta": 0.0007996801279488205,
+        "micro_wer_ci95": [
+          -0.0009854547485995263,
+          0.0027883244450560888
+        ]
+      }
+    }
+  },
+  "generated_at": "2026-10-30T14:22:42Z"
+}
