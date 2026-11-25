@@ -79,6 +79,14 @@
 - `train/dpo_track3b_e1_all_lr3e6_b01_ga8.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 单字全覆盖配置（`me=1`、保留全部退化对 `exclude_clean_identical_rejected=false`、`margin=[-4,0]`、`676` train / `160` val、`lr=3e-6`、`beta=0.1`、`ga=8`、`max_steps=75`、每 25 步评测）。
 - `train/dpo_track3b_e2_all_lr3e6_b01_ga16.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 双字全覆盖大批量配置（`me=2`、`exclude_clean_identical_rejected=false`、`margin=[-4,0]`、`920` train / `160` val、`lr=3e-6`、`beta=0.1`、`ga=16`、`max_steps=54`、每 18 步评测）。
 - `train/dpo_track3b_e2_excl_lr1e6_b01_ga4.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 超温和长步数配置（`me=2`、去 clean 同音、`margin=[-4,0]`、`388` train / `160` val、`lr=1e-6`、`beta=0.1`、`ga=4`、`max_steps=90`、每 30 步评测）。
+- `train/dpo_track3b_w2_e1_lr5e6_b02_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 甜区配置（`w3` 强锚孪生：`me=1`、去 clean 同音、`lr=5e-6`、`beta=0.2`、`dropout_anchor_weight=0.08`、`ga=4`、`max_steps=45`、每 15 步全量评测）。
+- `train/dpo_track3b_w2_e1_lr75e7_b02_a05_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 甜区配置（`lr=7.5e-6`、`beta=0.2`、`anchor=0.05`、`ga=4`、`max_steps=45`、每 15 步评测）。
+- `train/dpo_track3b_w2_e1_lr5e6_b03_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 甜区配置（`lr=5e-6`、`beta=0.3`、`anchor=0.08`、`ga=4`、`max_steps=45`、每 15 步评测）。
+- `train/dpo_track3b_w2_e1_lr1e5_b01_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 甜区配置（`w2` 强锚细评孪生：`lr=1e-5`、`beta=0.1`、`anchor=0.08`、`ga=4`、`max_steps=45`、每 15 步评测）。
+- `train/dpo_track3b_w2_e1_lr75e7_b015_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 几何中点配置（`lr=7.5e-6`、`beta=0.15`、`anchor=0.08`、`ga=4`、`max_steps=45`、每 15 步评测）。
+- `train/dpo_track3b_w2_e1_m8_lr5e6_b02_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 宽 margin 甜区配置（`margin=[-8,0]`、`279` train / `242` val、`lr=5e-6`、`beta=0.2`、`anchor=0.08`、`max_steps=45`、每 15 步评测）。
+- `train/dpo_track3b_w2_e1_lr5e6_b02_h100_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 方案 1 余弦配置（`scheduler_max_steps=100`、`lr=5e-6`、`beta=0.2`、`anchor=0.08`、`max_steps=45`、每 15 步评测）。
+- `train/dpo_track3b_w2_e1_lr5e6_b02_a10_s2_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 双样本强静音锚配置（`anchor=0.10`、`dropout_anchor_samples_per_step=2`、`lr=5e-6`、`beta=0.2`、`max_steps=45`、每 15 步评测）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 
