@@ -87,6 +87,18 @@
 - `train/dpo_track3b_w2_e1_m8_lr5e6_b02_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 宽 margin 甜区配置（`margin=[-8,0]`、`279` train / `242` val、`lr=5e-6`、`beta=0.2`、`anchor=0.08`、`max_steps=45`、每 15 步评测）。
 - `train/dpo_track3b_w2_e1_lr5e6_b02_h100_a08_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 方案 1 余弦配置（`scheduler_max_steps=100`、`lr=5e-6`、`beta=0.2`、`anchor=0.08`、`max_steps=45`、每 15 步评测）。
 - `train/dpo_track3b_w2_e1_lr5e6_b02_a10_s2_e15.yaml`：Phase 6 Track 3B Stage 2 DPO Wave 2 双样本强静音锚配置（`anchor=0.10`、`dropout_anchor_samples_per_step=2`、`lr=5e-6`、`beta=0.2`、`max_steps=45`、每 15 步评测）。
+- `train/aishell_slr28_val_dpo_w3s40_20261125.json`：Phase 6 Track 3B Stage 2 冠军不可变 DPO release（`dpo_06b_zh_20261125T005003_step000040`、`lr=5e-6 beta=0.2 Step 40`，2500 条读回 `mismatch_count=0`，`micro_cer=6.068%`、`-125` 字编辑、`-76` 词编辑、`-67` 物理退化）在 `aishell1_slr28` `val.jsonl` 上的固定父指标基线，供 Stage 3 Track 3B RL 门禁引用。
+- `train/rl_track3b_smoke.yaml`：Phase 6 Track 3B Stage 3 标点匹配 RL 6-step 中断恢复 smoke 配置（`profile: smoke`、`interrupt_after_step: 5`、`save_steps: 5`、`eval_steps: 6`、`max_steps: 6`，使用 10 条 `smoke_manifest/val.jsonl`，父 release 为 `dpo_06b_zh_20261125T005003_step000040`，不可发布）。
+- `train/rl_track3b_lr1e6_kl010_e2_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 主配置（`allow_matched_punctuation=true`、`lr=1e-6`、`kl_beta=0.10`、`max_edit_count=2`、`ga=4`、`dropout_anchor_weight=0.05`、`max_steps=15`、每 5 步全量 val 与 `raw_kl` 门禁）。
+- `train/rl_track3b_lr5e7_kl010_e2_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 超温和学习率配置（`lr=5e-7`、`kl_beta=0.10`、`me=2`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr2e6_kl010_e2_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 强学习率配置（`lr=2e-6`、`kl_beta=0.10`、`me=2`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr1e6_kl005_e2_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 轻 KL 约束配置（`lr=1e-6`、`kl_beta=0.05`、`me=2`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr1e6_kl020_e2_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 强 KL 锚定配置（`lr=1e-6`、`kl_beta=0.20`、`me=2`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr1e6_kl010_e1_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 严格单字替换配置（`lr=1e-6`、`kl_beta=0.10`、`me=1`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr2e6_kl010_e1_ga4.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 单字替换强学习率配置（`lr=2e-6`、`kl_beta=0.10`、`me=1`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr1e6_kl010_e2_ga8.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 大批量低方差配置（`lr=1e-6`、`kl_beta=0.10`、`me=2`、`ga=8`、`anchor=0.05`、`max_steps=12`、每 4 步评测）。
+- `train/rl_track3b_lr1e6_kl010_e2_ga4_ffrv.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 远场+混响专精配置（`train_scenarios=[far_field, reverb]`、`lr=1e-6`、`kl_beta=0.10`、`me=2`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_lr15e7_kl015_e2_ga4_a03.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 均衡中点配置（`lr=1.5e-6`、`kl_beta=0.15`、`me=2`、`ga=4`、`anchor=0.03`、`max_steps=15`、每 5 步评测）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 

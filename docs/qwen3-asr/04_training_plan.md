@@ -874,6 +874,23 @@ chosen 固定是 manifest 的原文，`chosen_cer` 为 0。rejected 是 `predict
 
 影响：为 Stage 3 Track 3B RL 锁定高信号、零标点漂移的不可变 DPO 父 release，不影响历史 Phase 3 DPO release 与测试。
 
+## Phase 6 Track 3B Stage 3：标点匹配 RL（`group_pg_mixed_v1`）10 路并发 `scale` 训练方案（2026-11-25）
+
+背景：Stage 2 Track 3B DPO 冠军 release `dpo_06b_zh_20261125T005003_step000040`（`adapter_sha256=bdbe13bded05223f6a3cbadd07a82a63b253717ad4c025a0d941303cfb07734c`，2500 条读回 `mismatch_count=0`）已在 SLR28 `val` 上将总编辑数降至 `2222`（相对 SFT `-8`、相对 Base `-125`）、`physical_degraded_3` 降至 `737`（相对 SFT `-9`、相对 Base `-67`）且 100% 保持标点。按正式后训练顺序 `SFT → DPO → RL`，Stage 3 在线 rollout `group_pg_mixed_v1` 直接优化与评测口径一致的 `1 - CER` 奖励并由固定 step 0 前缀词表条件 KL 约束偏离。
+
+范围：新增 Stage 2 父指标固化文件 `configs/train/aishell_slr28_val_dpo_w3s40_20261125.json`、6-step 中断恢复 smoke 配置 `configs/train/rl_track3b_smoke.yaml` 以及 10 份正交 Track 3B RL `scale` 配置 `configs/train/rl_track3b_*.yaml`；不修改任何历史 Phase 1–5 / Track 2 配置与冻结产物。
+
+设计：
+1. **统一冻结父版本与标点匹配组内对齐**：全部配置绑定 `parent_release: dpo_06b_zh_20261125T005003_step000040`、`lora.rank: 16`、`lora.alpha: 32`、`lora.dropout: 0.0`、`rl.allow_matched_punctuation: true`、`rl.loss_token_scope: mismatched_only`、`rl.accumulate_signal_groups_only: true`、`rl.dropout_anchor_weight ∈ {0.03, 0.05}`，并在训练前由独立读回验证的 `dpo_06b_zh_20261125T005003_step000040` 生成与检验同进程 `reference_sha256` 一致的 `eval/step_000000/` 基准前缀（零借用其他模型或历史 run）。
+2. **独立 6-step 中断恢复 Smoke（`rl_track3b_smoke.yaml`）**：`profile: smoke`、`interrupt_after_step: 5`、`save_steps: 5`、`eval_steps: 6`、`max_steps: 6`（10 条 `smoke_manifest/val.jsonl`），在 `t3-w0` 上先跑完 Step 1–5 中断 → `--resume` Step 6 完赛并验证 `reference_matched=true` 与 `raw_kl`，随后衔接主 `scale` RL 训练。
+3. **10 路正交超参覆盖**：覆盖 `learning_rate ∈ {5e-7, 1e-6, 1.5e-6, 2e-6}`、`kl_beta ∈ {0.05, 0.10, 0.15, 0.20}`、`max_edit_count ∈ {1, 2}`、`gradient_accumulation_steps ∈ {4, 8}`、`dropout_anchor_weight ∈ {0.03, 0.05}` 以及 `[noise, reverb, far_field]` 与 `[far_field, reverb]` 两组物理退化场景切片；统一要求 `min_reward_improvement: 0.00002`、`raw_kl_max: 0.001`、`degraded_macro_increase_max: 0.0`。
+
+测试：运行 `.venv/bin/python -m unittest discover -s tests -v` 并逐一调用 `train.rl_schema.load_rl_config` 校验全部 11 份配置；A100 上验证 `RL_PREFLIGHT_OK`、`RL_INTERRUPT` + `RL_RESUME`、`reference_matched=true`、`raw_kl <= 0.001` 与全量 2500 条 `val` 门禁。
+
+验收：至少 1 组 Track 3B RL `scale` 候选通过全部 `RL_GATE` 硬门禁（`passed=true`、`risk_stop=false`、`reference_matched=true`、`raw_kl <= 0.001`、`reward_delta_vs_step0 >= 0.00002`、`degraded_macro_delta <= 0.0`），通过 `evaluation/math_expectation.py` 配对源簇 Bootstrap 检验，完成 `train/rl_release.py` 独立新进程 2500 条 `val` 读回发布（`matched=true, mismatch_count=0`）并全量归档至 Google Drive `MyDrive/qwen3-asr/releases/rl/` 与 `MyDrive/qwen3-asr/runs/`。
+
+影响：为 Stage 4 封存 `test.jsonl` 与只读 `AliMeeting Eval` 四阶段终局对比交付不可变 Track 3B RL release，保持历史 Phase 4 RL release 与测试不受影响。
+
 ## 影响与未验证项
 
 此次修正将 DPO 序列归约、阶段 adapter 衔接、RL 混合采样的偏差、KL 门禁测量、累积退化门禁和恢复状态变成明确合同。新实现需按这些合同构建，不能直接沿用旧历史结果。A100 容量、依赖组合、最佳超参数、数据规模、KL/健康度阈值适用性及 CER 改善仍需真实 smoke/pilot；当前没有效果证据，更不能宣称达到或超过 Mega-ASR。

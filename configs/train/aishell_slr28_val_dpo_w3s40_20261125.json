@@ -1,0 +1,31 @@
+{
+  "schema_version": "qwen3-asr-parent-metrics-v1",
+  "split": "val",
+  "parent": "dpo",
+  "release_id": "dpo_06b_zh_20261125T005003_step000040",
+  "source_step": 40,
+  "samples": 2500,
+  "micro_cer": 0.060677225559803386,
+  "by_scenario": {
+    "clean": {
+      "samples": 500,
+      "micro_cer": 0.019524849808847625
+    },
+    "noise": {
+      "samples": 500,
+      "micro_cer": 0.0323593664664118
+    },
+    "reverb": {
+      "samples": 500,
+      "micro_cer": 0.02170944838885855
+    },
+    "far_field": {
+      "samples": 500,
+      "micro_cer": 0.0465592572364828
+    },
+    "dropout": {
+      "samples": 500,
+      "micro_cer": 0.18323320589841616
+    }
+  }
+}
