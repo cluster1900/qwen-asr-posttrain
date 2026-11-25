@@ -1,0 +1,134 @@
+/* EPUB3 Stylesheet: Compatible with Apple Books, Calibre, Thorium, Kobo, WeRead */
+body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.78;
+  color: #1e293b;
+  margin: 0 4%;
+}
+
+h1 {
+  font-size: 1.55em;
+  color: #0f172a;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 0.3em;
+  margin-top: 1.2em;
+  margin-bottom: 0.8em;
+}
+h1.part-banner {
+  background-color: #eff6ff;
+  border-left: 5px solid #2563eb;
+  border-bottom: none;
+  padding: 0.6em 0.8em;
+  color: #1d4ed8;
+  font-size: 1.35em;
+}
+h2 {
+  font-size: 1.25em;
+  color: #0f172a;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 0.2em;
+  margin-top: 1.6em;
+}
+h3 {
+  font-size: 1.08em;
+  color: #1e293b;
+  margin-top: 1.3em;
+}
+
+p { margin: 0.75em 0; }
+
+blockquote {
+  margin: 1em 0;
+  padding: 0.6em 1em;
+  border-left: 4px solid #2563eb;
+  background-color: #f8fafc;
+}
+
+.callout {
+  margin: 1.1em 0;
+  padding: 0.75em 1em;
+  border: 1px solid #cbd5e1;
+  border-left-width: 4px;
+  border-radius: 6px;
+  background-color: #f8fafc;
+}
+.callout-title {
+  font-weight: bold;
+  margin-bottom: 0.45em;
+}
+.callout-tip { border-left-color: #0d9488; background-color: #f0fdfa; }
+.callout-tip .callout-title { color: #0f766e; }
+.callout-warning { border-left-color: #e11d48; background-color: #fff1f2; }
+.callout-warning .callout-title { color: #be123c; }
+.callout-example { border-left-color: #2563eb; background-color: #eff6ff; }
+.callout-example .callout-title { color: #1d4ed8; }
+.callout-note { border-left-color: #d97706; background-color: #fffbeb; }
+.callout-note .callout-title { color: #b45309; }
+
+figure {
+  margin: 1.2em 0;
+  text-align: center;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  font-size: 0.85em;
+  color: #64748b;
+  margin-top: 0.4em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.88em;
+}
+th, td {
+  border: 1px solid #cbd5e1;
+  padding: 0.45em 0.55em;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background-color: #f1f5f9;
+  font-weight: bold;
+}
+
+code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background-color: #f1f5f9;
+  color: #be123c;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+pre {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 0.8em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82em;
+  line-height: 1.48;
+}
+pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+p:has(> math[display="block"]) {
+  text-align: center;
+  margin: 0.9em 0;
+}
+math {
+  font-size: 1.02em;
+}
+math[display="block"] {
+  display: inline-block;
+  margin: 0 auto;
+}

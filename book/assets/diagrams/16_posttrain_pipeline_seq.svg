@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 440" width="920" height="440">
+  <defs>
+    <marker id="a16" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="a16g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#059669"/>
+    </marker>
+    <marker id="a16r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48"/>
+    </marker>
+  </defs>
+  <rect width="920" height="440" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 9-2 工业级后训练三阶段流水线（SFT → DPO → RL/GRPO）与不可变门禁发布合同</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">每一阶段都必须通过独立的验证集门禁 + 跨进程 100% Readback 校验，才允许晋级为下一阶段的父模型</text>
+
+  <!-- Stage 0: Base -->
+  <rect x="24" y="88" width="132" height="142" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+  <text x="90" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a" font-family="'PingFang SC',sans-serif">Phase 0 基座</text>
+  <text x="90" y="136" text-anchor="middle" font-size="11" fill="#334155" font-family="'SF Mono',sans-serif">Qwen3-ASR-0.6B</text>
+  <text x="90" y="158" text-anchor="middle" font-size="10.5" fill="#475569" font-family="'PingFang SC',sans-serif">锁定 Revision</text>
+  <text x="90" y="176" text-anchor="middle" font-size="10.5" fill="#475569" font-family="'PingFang SC',sans-serif">固化 Val Baseline</text>
+  <rect x="36" y="192" width="108" height="24" rx="5" fill="#e2e8f0"/>
+  <text x="90" y="208" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b" font-family="'SF Mono',monospace">Base CER 6.41%</text>
+
+  <line x1="156" y1="159" x2="186" y2="159" stroke="#475569" stroke-width="2" marker-end="url(#a16)"/>
+
+  <!-- Stage 1: SFT -->
+  <rect x="190" y="88" width="194" height="142" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text x="287" y="114" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">阶段一：SFT 监督微调</text>
+  <text x="287" y="136" text-anchor="middle" font-size="11" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">目标：“教会标准答案”</text>
+  <text x="287" y="156" text-anchor="middle" font-size="10.5" fill="#334155" font-family="'PingFang SC',sans-serif">· 物理增强音频 + 自对齐标点</text>
+  <text x="287" y="174" text-anchor="middle" font-size="10.5" fill="#334155" font-family="'PingFang SC',sans-serif">· 仅对转写+EOS算交叉熵</text>
+  <rect x="204" y="190" width="166" height="28" rx="6" fill="#d1fae5" stroke="#059669"/>
+  <text x="287" y="208" text-anchor="middle" font-size="10.5" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">✓ 门禁+读回通过 → 发布 SFT</text>
+
+  <line x1="384" y1="159" x2="414" y2="159" stroke="#059669" stroke-width="2.2" marker-end="url(#a16g)"/>
+
+  <!-- Stage 2: DPO -->
+  <rect x="418" y="88" width="212" height="142" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+  <text x="524" y="114" text-anchor="middle" font-size="13.5" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">阶段二：DPO 偏好对齐</text>
+  <text x="524" y="136" text-anchor="middle" font-size="11" fill="#b45309" font-family="'PingFang SC',sans-serif">目标：“拉大好坏差距”</text>
+  <text x="524" y="156" text-anchor="middle" font-size="10.5" fill="#334155" font-family="'PingFang SC',sans-serif">· 用 SFT 错误构造 (好/坏) 对</text>
+  <text x="524" y="174" text-anchor="middle" font-size="10.5" fill="#334155" font-family="'PingFang SC',sans-serif">· 离线冻结 Ref + 差异 Token 掩码</text>
+  <rect x="432" y="190" width="184" height="28" rx="6" fill="#d1fae5" stroke="#059669"/>
+  <text x="524" y="208" text-anchor="middle" font-size="10.5" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">✓ 偏好&amp;CER 双过 → 发布 DPO</text>
+
+  <line x1="630" y1="159" x2="660" y2="159" stroke="#059669" stroke-width="2.2" marker-end="url(#a16g)"/>
+
+  <!-- Stage 3: RL/GRPO -->
+  <rect x="664" y="88" width="232" height="142" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="780" y="114" text-anchor="middle" font-size="13.5" font-weight="700" fill="#5b21b6" font-family="'PingFang SC',sans-serif">阶段三：RL / GRPO 在线探索</text>
+  <text x="780" y="136" text-anchor="middle" font-size="11" fill="#6d28d9" font-family="'PingFang SC',sans-serif">目标：“直接优化不可微指标”</text>
+  <text x="780" y="156" text-anchor="middle" font-size="10.5" fill="#334155" font-family="'PingFang SC',sans-serif">· 每条采样 G=4 候选，按 CER 打分</text>
+  <text x="780" y="174" text-anchor="middle" font-size="10.5" fill="#334155" font-family="'PingFang SC',sans-serif">· 组内 Advantage + k3 KL 约束</text>
+  <rect x="678" y="190" width="204" height="28" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="780" y="208" text-anchor="middle" font-size="10.5" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">过门禁才发布；不过则回退 DPO!</text>
+
+  <!-- Gate & Seal Test Lane -->
+  <path d="M 524 230 L 524 274" stroke="#059669" stroke-width="2.2" marker-end="url(#a16g)"/>
+  <path d="M 780 230 L 780 258 L 620 258 L 620 274" fill="none" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#a16r)"/>
+  <text x="752" y="251" text-anchor="middle" font-size="10.5" font-weight="600" fill="#be123c" font-family="'PingFang SC',sans-serif">Track 3B 诚实拦截 gate_failed，晋级 DPO 冠军</text>
+
+  <!-- Final Evaluation Box -->
+  <rect x="24" y="278" width="872" height="140" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+  <text x="460" y="302" text-anchor="middle" font-size="14" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">
+    终局双盲验收（封存 Test 集 + 只读 OOD 真实会议 AliMeeting，全生命周期只评一次！）
+  </text>
+
+  <rect x="44" y="318" width="404" height="86" rx="8" fill="#ffffff" stroke="#10b981"/>
+  <text x="60" y="340" font-size="12" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">
+    封存域内 Test（2500 条 · 500 源句簇）
+  </text>
+  <text x="60" y="361" font-size="11.5" fill="#1e293b" font-family="'PingFang SC','SF Mono',sans-serif">
+    Base: 2053 编辑 (5.59%) → SFT: 1985 (-68) → DPO: 1986 (-67)
+  </text>
+  <text x="60" y="382" font-size="11" font-weight="700" fill="#047857" font-family="'PingFang SC',sans-serif">
+    500 簇配对 Bootstrap 95% CI 严格 &lt; 0（胜率 P = 99.2%–99.8%！）
+  </text>
+
+  <rect x="472" y="318" width="404" height="86" rx="8" fill="#ffffff" stroke="#10b981"/>
+  <text x="488" y="340" font-size="12" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">
+    真实会议 OOD AliMeeting（1000 条 · 0 重叠近/远场配对）
+  </text>
+  <text x="488" y="361" font-size="11.5" fill="#1e293b" font-family="'PingFang SC','SF Mono',sans-serif">
+    Base: 1038 → SFT: 1001 (-37) → DPO 冠军: 998 (-40 字 / -34 词!)
+  </text>
+  <text x="488" y="382" font-size="11" font-weight="700" fill="#047857" font-family="'PingFang SC',sans-serif">
+    远场 -21 编辑、近讲 -19 编辑、标点 100% 保持，Sim-to-Real 突破！
+  </text>
+</svg>

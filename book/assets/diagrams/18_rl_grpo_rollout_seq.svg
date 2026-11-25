@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" width="920" height="460">
+  <defs>
+    <marker id="a18" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="a18p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#7c3aed"/>
+    </marker>
+    <marker id="a18g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#059669"/>
+    </marker>
+  </defs>
+  <rect width="920" height="460" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 11-1 GRPO / group_pg_mixed_v1 在线强化学习单步执行时序图</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">无需额外训练 Critic 价值网络！同一条输入并行生成 G=4 个候选，用组内相对好坏（Advantage）+ 冻结 Ref 的 k3 KL 稳健更新</text>
+
+  <!-- Lifelines -->
+  <g font-family="'PingFang SC',sans-serif" font-size="12" font-weight="700" text-anchor="middle">
+    <rect x="30" y="70" width="142" height="36" rx="8" fill="#1e293b"/><text x="101" y="92" fill="#ffffff">训练音频样本 x</text>
+    <rect x="206" y="70" width="152" height="36" rx="8" fill="#7c3aed"/><text x="282" y="92" fill="#ffffff">当前策略 π_θ (LoRA)</text>
+    <rect x="394" y="70" width="152" height="36" rx="8" fill="#059669"/><text x="470" y="92" fill="#ffffff">Reward 裁判 (CER)</text>
+    <rect x="582" y="70" width="146" height="36" rx="8" fill="#64748b"/><text x="655" y="92" fill="#ffffff">冻结参考 π_ref</text>
+    <rect x="760" y="70" width="134" height="36" rx="8" fill="#d97706"/><text x="827" y="92" fill="#ffffff">梯度 &amp; 门禁</text>
+  </g>
+  <line x1="101" y1="106" x2="101" y2="438" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <line x1="282" y1="106" x2="282" y2="438" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <line x1="470" y1="106" x2="470" y2="438" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <line x1="655" y1="106" x2="655" y2="438" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <line x1="827" y1="106" x2="827" y2="438" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,4"/>
+
+  <!-- Step 1: Rollout -->
+  <line x1="101" y1="136" x2="274" y2="136" stroke="#7c3aed" stroke-width="2" marker-end="url(#a18p)"/>
+  <text x="188" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#5b21b6" font-family="'PingFang SC',sans-serif">1. 送入 1 条退化音频</text>
+
+  <rect x="200" y="146" width="164" height="44" rx="6" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="282" y="164" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6" font-family="'PingFang SC',sans-serif">Rollout 生成 G=4 候选</text>
+  <text x="282" y="180" text-anchor="middle" font-size="10" fill="#6d28d9" font-family="'PingFang SC',sans-serif">1 Greedy + 3 Sample (固定种子)</text>
+
+  <!-- Step 2: Reward -->
+  <line x1="282" y1="208" x2="462" y2="208" stroke="#059669" stroke-width="2" marker-end="url(#a18g)"/>
+  <text x="372" y="202" text-anchor="middle" font-size="11" fill="#065f46" font-family="'PingFang SC',sans-serif">2. 4 个候选文本 y₁..y₄</text>
+
+  <rect x="382" y="216" width="176" height="58" rx="6" fill="#ecfdf5" stroke="#059669"/>
+  <text x="470" y="234" text-anchor="middle" font-size="10.5" font-weight="700" fill="#065f46" font-family="'SF Mono','PingFang SC',sans-serif">Rᵢ = clip(1-CER-0.5·空-0.5·重)</text>
+  <text x="470" y="250" text-anchor="middle" font-size="10.5" fill="#047857" font-family="'SF Mono',monospace">Aᵢ = Rᵢ - mean(R₁..R₄)</text>
+  <text x="470" y="266" text-anchor="middle" font-size="10" font-weight="700" fill="#be123c" font-family="'PingFang SC',sans-serif">若全组同分(A≡0)→整组归零跳过!</text>
+
+  <!-- Step 3: Reference swap (BEFORE policy forward!) -->
+  <line x1="470" y1="292" x2="647" y2="292" stroke="#475569" stroke-width="2" marker-end="url(#a18)"/>
+  <text x="558" y="286" text-anchor="middle" font-size="11" font-weight="600" fill="#334155" font-family="'PingFang SC',sans-serif">3. 先在 no_grad 下算 log π_ref</text>
+
+  <rect x="572" y="300" width="166" height="40" rx="6" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="655" y="317" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155" font-family="'PingFang SC',sans-serif">临时换入 CPU 冻结 LoRA</text>
+  <text x="655" y="332" text-anchor="middle" font-size="10" fill="#475569" font-family="'PingFang SC',sans-serif">算完立刻恢复 π_θ (防版本冲突)</text>
+
+  <!-- Step 4: Policy forward & k3 KL -->
+  <line x1="655" y1="358" x2="290" y2="358" stroke="#7c3aed" stroke-width="2" marker-end="url(#a18p)"/>
+  <text x="472" y="352" text-anchor="middle" font-size="11" font-weight="600" fill="#5b21b6" font-family="'PingFang SC',sans-serif">4. 再用 π_θ 逐候选前向 + 差异位点反传（省 4× 激活显存）</text>
+
+  <!-- Step 5: Loss & Gate -->
+  <rect x="336" y="366" width="430" height="18" rx="4" fill="#f8fafc"/>
+  <line x1="282" y1="388" x2="819" y2="388" stroke="#d97706" stroke-width="2.2" marker-end="url(#a18)"/>
+  <text x="551" y="379" text-anchor="middle" font-size="10.8" font-weight="700" fill="#92400e" font-family="'SF Mono','PingFang SC',sans-serif">
+    5. L = mean(-Aᵢ·log π_θ + β·k3_KL)，其中 k3 = exp(d) - 1 - d ≥ 0
+  </text>
+
+  <rect x="738" y="396" width="162" height="44" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="1.6"/>
+  <text x="819" y="414" text-anchor="middle" font-size="10.5" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">满 4 个有效组才 step()</text>
+  <text x="819" y="430" text-anchor="middle" font-size="10" fill="#b45309" font-family="'PingFang SC',sans-serif">Val 审 raw_kl≤0.001 &amp; CER</text>
+</svg>

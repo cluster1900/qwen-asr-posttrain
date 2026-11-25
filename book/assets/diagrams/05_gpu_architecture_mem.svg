@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" width="920" height="460">
+  <defs>
+    <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="920" height="460" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 3-1 现代 GPU（以 NVIDIA A100 为例）内部架构与四级存储金字塔</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">算力极其充沛，数据搬运却很昂贵——一切 GPU 优化的本质，都是把数据尽量留在越靠近“塔尖”的高速缓存里反复复用</text>
+
+  <!-- Left Side: Compute Architecture (SM) -->
+  <rect x="28" y="72" width="445" height="366" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="1.8"/>
+  <text x="46" y="96" font-size="14" font-weight="700" fill="#1d4ed8" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    计算核心侧：A100 = 108 个流多处理器 (SM) 并行工厂
+  </text>
+
+  <!-- One zoomed SM -->
+  <rect x="46" y="110" width="408" height="236" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.6"/>
+  <text x="62" y="132" font-size="12.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">单个 SM 内部解剖（共 4 个 Processing Block）</text>
+
+  <!-- 2x2 Sub-cores -->
+  <rect x="62" y="144" width="182" height="80" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="74" y="164" font-size="11.5" font-weight="700" fill="#1e40af" font-family="'PingFang SC',sans-serif">Warp 调度器 (32线程/束)</text>
+  <text x="74" y="182" font-size="11" fill="#334155" font-family="'PingFang SC',sans-serif">· 16× FP32 CUDA Core</text>
+  <text x="74" y="198" font-size="11" fill="#b45309" font-weight="600" font-family="'PingFang SC',sans-serif">· 1× 第3代 Tensor Core</text>
+  <text x="74" y="214" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">· 64 KB 寄存器文件 (RF)</text>
+
+  <rect x="256" y="144" width="182" height="80" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="268" y="164" font-size="11.5" font-weight="700" fill="#1e40af" font-family="'PingFang SC',sans-serif">Warp 调度器 #2</text>
+  <text x="268" y="182" font-size="11" fill="#334155" font-family="'PingFang SC',sans-serif">· 16× FP32 CUDA Core</text>
+  <text x="268" y="198" font-size="11" fill="#b45309" font-weight="600" font-family="'PingFang SC',sans-serif">· 1× 第3代 Tensor Core</text>
+  <text x="268" y="214" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">· 64 KB 寄存器文件 (RF)</text>
+
+  <rect x="62" y="232" width="182" height="44" rx="8" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="153" y="259" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">Sub-Core #3（同上）</text>
+
+  <rect x="256" y="232" width="182" height="44" rx="8" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="347" y="259" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">Sub-Core #4（同上）</text>
+
+  <!-- Shared Memory / L1 inside SM -->
+  <rect x="62" y="286" width="376" height="46" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.8"/>
+  <text x="250" y="307" text-anchor="middle" font-size="12.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC',sans-serif">片上 Shared Memory (SRAM) + L1 Cache</text>
+  <text x="250" y="324" text-anchor="middle" font-size="11" fill="#0f766e" font-family="'PingFang SC',sans-serif">每 SM 共 192 KB · 带宽 ~19 TB/s · FlashAttention 的主战场！</text>
+
+  <!-- SM key takeaway -->
+  <rect x="46" y="358" width="408" height="66" rx="8" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="60" y="380" font-size="12" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">CUDA Core vs Tensor Core（A100 对比）：</text>
+  <text x="60" y="399" font-size="11.5" fill="#334155" font-family="'PingFang SC',sans-serif">· CUDA Core (FP32 标量)：19.5 TFLOPS（一次算 1 个乘加）</text>
+  <text x="60" y="416" font-size="11.5" font-weight="600" fill="#b45309" font-family="'PingFang SC',sans-serif">· Tensor Core (BF16 矩阵)：312 TFLOPS（16× 算力爆发！）</text>
+
+  <!-- Right Side: Memory Pyramid -->
+  <rect x="492" y="72" width="400" height="366" rx="10" fill="#ffffff" stroke="#0d9488" stroke-width="1.8"/>
+  <text x="510" y="96" font-size="14" font-weight="700" fill="#0f766e" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    存储金字塔：速度差百倍，容量差万倍
+  </text>
+
+  <!-- Level 1: Registers -->
+  <rect x="572" y="114" width="240" height="58" rx="9" fill="#e11d48"/>
+  <text x="692" y="138" text-anchor="middle" font-size="12.5" font-weight="700" fill="#ffffff" font-family="'PingFang SC',sans-serif">L0 寄存器 (Registers)</text>
+  <text x="692" y="158" text-anchor="middle" font-size="10.5" fill="#ffe4e6" font-family="'SF Mono',monospace">~27 MB · &gt;100 TB/s · 1 cycle</text>
+
+  <!-- Level 2: SRAM / Shared Memory -->
+  <rect x="546" y="182" width="292" height="58" rx="9" fill="#d97706"/>
+  <text x="692" y="206" text-anchor="middle" font-size="12.5" font-weight="700" fill="#ffffff" font-family="'PingFang SC',sans-serif">L1 SRAM / Shared Memory</text>
+  <text x="692" y="226" text-anchor="middle" font-size="10.5" fill="#fffbeb" font-family="'SF Mono',monospace">~20 MB(全卡) · ~19 TB/s · ~25 cycles</text>
+
+  <!-- Level 3: L2 Cache -->
+  <rect x="524" y="250" width="336" height="58" rx="9" fill="#0d9488"/>
+  <text x="692" y="274" text-anchor="middle" font-size="12.5" font-weight="700" fill="#ffffff" font-family="'PingFang SC',sans-serif">L2 Cache (全 SM 共享片上缓存)</text>
+  <text x="692" y="294" text-anchor="middle" font-size="10.5" fill="#f0fdfa" font-family="'SF Mono',monospace">40 MB · ~4–5 TB/s · ~200 cycles</text>
+
+  <!-- Level 4: HBM2e -->
+  <rect x="506" y="318" width="372" height="64" rx="9" fill="#1e3a8a"/>
+  <text x="692" y="343" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" font-family="'PingFang SC',sans-serif">显存 HBM2e（平时说的 40GB / 80GB）</text>
+  <text x="692" y="365" text-anchor="middle" font-size="10.5" fill="#dbeafe" font-family="'SF Mono',monospace">80 GB · 2.0 TB/s (40G版 1.55 TB/s) · ~500 cycles</text>
+
+  <!-- Side annotations -->
+  <text x="692" y="408" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0f172a" font-family="'PingFang SC',sans-serif">
+    黄金拐点（A100 80G）：312 TFLOPS ÷ 2.0 TB/s = 156 FLOPs/B
+  </text>
+  <text x="692" y="426" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">
+    每从 HBM 搬 1 字节，至少做 156 次运算才不浪费 Tensor Core！
+  </text>
+</svg>

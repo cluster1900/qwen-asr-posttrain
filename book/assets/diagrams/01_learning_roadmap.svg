@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 430" width="920" height="430">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect width="920" height="430" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="34" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 0-1 全书 0-to-1 学习路线图：从高中数学到独立完成任意模型后训练</text>
+  <text x="460" y="55" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">四阶螺旋递进：先懂直觉与工具 → 再懂硬件与算子 → 透视模型每一层 → 亲手后训练并严谨验收</text>
+
+  <!-- Stage 1 -->
+  <rect x="28" y="80" width="200" height="230" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <rect x="28" y="80" width="200" height="36" rx="12" fill="#3b82f6"/>
+  <rect x="28" y="104" width="200" height="12" fill="#3b82f6"/>
+  <text x="128" y="104" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第一篇：地基与引擎</text>
+  <text x="44" y="142" font-size="12.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 1 章 数学与梯度直觉</text>
+  <text x="44" y="160" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 向量/矩阵/导数手算例</text>
+  <text x="44" y="176" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 链式法则与梯度下降</text>
+  <text x="44" y="202" font-size="12.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 2 章 PyTorch 底层</text>
+  <text x="44" y="220" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· Storage/Stride 内存视图</text>
+  <text x="44" y="236" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· Autograd 与重计算 Hook</text>
+  <text x="44" y="252" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· BF16/FP32 精度与 ULP</text>
+  <text x="44" y="286" font-size="11.5" font-weight="600" fill="#2563eb" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">产出：读懂每一行训练代码</text>
+
+  <!-- Arrow 1->2 -->
+  <line x1="228" y1="195" x2="256" y2="195" stroke="#475569" stroke-width="2.2" marker-end="url(#arr)"/>
+
+  <!-- Stage 2 -->
+  <rect x="260" y="80" width="200" height="230" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <rect x="260" y="80" width="200" height="36" rx="12" fill="#6366f1"/>
+  <rect x="260" y="104" width="200" height="12" fill="#6366f1"/>
+  <text x="360" y="104" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第二篇：硬件与算子</text>
+  <text x="276" y="142" font-size="12.5" font-weight="700" fill="#312e81" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 3 章 GPU 与 Roofline</text>
+  <text x="276" y="160" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· SM/Warp/Tensor Core</text>
+  <text x="276" y="176" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 计算瓶颈 vs 显存带宽瓶颈</text>
+  <text x="276" y="202" font-size="12.5" font-weight="700" fill="#312e81" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 4–5 章 算子与显存</text>
+  <text x="276" y="220" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· GEMM / FlashAttention</text>
+  <text x="276" y="236" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· RMSNorm / SwiGLU / Triton</text>
+  <text x="276" y="252" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 显存公式手算与显卡选型</text>
+  <text x="276" y="286" font-size="11.5" font-weight="600" fill="#4f46e5" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">产出：不再盲猜 OOM 与速度</text>
+
+  <line x1="460" y1="195" x2="488" y2="195" stroke="#475569" stroke-width="2.2" marker-end="url(#arr)"/>
+
+  <!-- Stage 3 -->
+  <rect x="492" y="80" width="196" height="230" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+  <rect x="492" y="80" width="196" height="36" rx="12" fill="#0d9488"/>
+  <rect x="492" y="104" width="196" height="12" fill="#0d9488"/>
+  <text x="590" y="104" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第三篇：模型全解剖</text>
+  <text x="508" y="142" font-size="12.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 6 章 7.82 亿参数总览</text>
+  <text x="508" y="160" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 精确到最后 1 个参数账本</text>
+  <text x="508" y="186" font-size="12.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 7 章 听觉编码器 18 层</text>
+  <text x="508" y="204" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· Mel→3×Conv2d→AuT→Proj</text>
+  <text x="508" y="230" font-size="12.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 8 章 语言解码器 28 层</text>
+  <text x="508" y="248" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· GQA/QK-Norm/RoPE/SwiGLU</text>
+  <text x="508" y="264" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 拆解任意开源模型通法</text>
+  <text x="508" y="294" font-size="11.5" font-weight="600" fill="#0f766e" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">产出：看穿任何模型每一层</text>
+
+  <line x1="688" y1="195" x2="716" y2="195" stroke="#475569" stroke-width="2.2" marker-end="url(#arr)"/>
+
+  <!-- Stage 4 -->
+  <rect x="720" y="80" width="174" height="230" rx="12" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+  <rect x="720" y="80" width="174" height="36" rx="12" fill="#d97706"/>
+  <rect x="720" y="104" width="174" height="12" fill="#d97706"/>
+  <text x="807" y="104" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第四篇：后训练闭环</text>
+  <text x="734" y="142" font-size="12.5" font-weight="700" fill="#78350f" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 9 章 LoRA 与 SFT</text>
+  <text x="734" y="160" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 掩码对齐与标点修复</text>
+  <text x="734" y="186" font-size="12.5" font-weight="700" fill="#78350f" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 10 章 DPO 偏好对齐</text>
+  <text x="734" y="204" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 差异掩码根治幻觉</text>
+  <text x="734" y="230" font-size="12.5" font-weight="700" fill="#78350f" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 11–12 章 RL 与通法</text>
+  <text x="734" y="248" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· GRPO / k3 KL / 门禁</text>
+  <text x="734" y="264" font-size="11" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">· 任意模型 7 步 SOP</text>
+  <text x="734" y="294" font-size="11.5" font-weight="600" fill="#b45309" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">产出：独立交付生产模型</text>
+
+  <!-- Bottom Practice Bar -->
+  <rect x="28" y="335" width="866" height="72" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.6"/>
+  <text x="48" y="362" font-size="13.5" font-weight="700" fill="#065f46" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    贯穿全书的“三层教学法”与“活体工程案例”：
+  </text>
+  <text x="48" y="387" font-size="12" fill="#047857" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    ① 先讲生活类比 + 3×3 小数字手算 → ② 再给严谨公式与逐符号翻译 → ③ 最后落到可运行 PyTorch 代码与 Qwen3-ASR-0.6B 真实 A100 实验数据复盘
+  </text>
+</svg>

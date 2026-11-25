@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 430" width="920" height="430">
+  <rect width="920" height="430" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 2-3 现代大模型浮点格式位结构对比与 BF16 小步长 ULP 吞噬陷阱</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">指数位决定“能表示多大范围”（防溢出），尾数位决定“相邻两个数隔多远”（精度 ULP）</text>
+
+  <!-- Legend -->
+  <rect x="260" y="66" width="16" height="14" rx="3" fill="#e11d48"/>
+  <text x="282" y="78" font-size="12" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">符号位 (Sign)</text>
+  <rect x="390" y="66" width="16" height="14" rx="3" fill="#2563eb"/>
+  <text x="412" y="78" font-size="12" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">指数位 (Exponent · 决定范围)</text>
+  <rect x="606" y="66" width="16" height="14" rx="3" fill="#0d9488"/>
+  <text x="628" y="78" font-size="12" fill="#334155" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">尾数位 (Mantissa · 决定精度)</text>
+
+  <!-- Bit bars (scale: 1 bit = 19px, x starts at 170) -->
+  <!-- FP32: 1 + 8 + 23 = 32 bits -> 608px -->
+  <text x="38" y="118" font-size="13.5" font-weight="700" fill="#0f172a" font-family="'SF Mono',monospace">FP32 (32 bit)</text>
+  <text x="38" y="134" font-size="11" fill="#64748b" font-family="'PingFang SC',sans-serif">主权重 / 累加器</text>
+  <rect x="170" y="100" width="19" height="34" rx="3" fill="#e11d48"/><text x="179.5" y="122" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">1</text>
+  <rect x="191" y="100" width="152" height="34" rx="3" fill="#2563eb"/><text x="267" y="122" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">8 bits (范围 ±3.4×10³⁸)</text>
+  <rect x="345" y="100" width="437" height="34" rx="3" fill="#0d9488"/><text x="563" y="122" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">23 bits (~7 位有效十进制数字 · 相对步长 1.19×10⁻⁷)</text>
+  <text x="795" y="122" font-size="11.5" font-weight="600" fill="#0f766e" font-family="'PingFang SC',sans-serif">4 Bytes</text>
+
+  <!-- TF32: 1 + 8 + 10 = 19 bits -->
+  <text x="38" y="168" font-size="13.5" font-weight="700" fill="#0f172a" font-family="'SF Mono',monospace">TF32 (19 bit)</text>
+  <text x="38" y="184" font-size="11" fill="#64748b" font-family="'PingFang SC',sans-serif">A100 矩阵乘加速</text>
+  <rect x="170" y="150" width="19" height="34" rx="3" fill="#e11d48"/><text x="179.5" y="172" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">1</text>
+  <rect x="191" y="150" width="152" height="34" rx="3" fill="#2563eb"/><text x="267" y="172" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">8 bits (同 FP32)</text>
+  <rect x="345" y="150" width="190" height="34" rx="3" fill="#0d9488"/><text x="440" y="172" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">10 bits (同 FP16 精度)</text>
+  <text x="550" y="172" font-size="11.5" fill="#475569" font-family="'PingFang SC',sans-serif">Tensor Core 内部格式（存仍是 4B）</text>
+
+  <!-- BF16: 1 + 8 + 7 = 16 bits -->
+  <text x="38" y="218" font-size="13.5" font-weight="700" fill="#b45309" font-family="'SF Mono',monospace">BF16 (16 bit)</text>
+  <text x="38" y="234" font-size="11" fill="#b45309" font-family="'PingFang SC',sans-serif">现代训练绝对主力</text>
+  <rect x="170" y="200" width="19" height="34" rx="3" fill="#e11d48"/><text x="179.5" y="222" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">1</text>
+  <rect x="191" y="200" width="152" height="34" rx="3" fill="#2563eb"/><text x="267" y="222" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">8 bits (永不轻易溢出)</text>
+  <rect x="345" y="200" width="133" height="34" rx="3" fill="#f59e0b"/><text x="411" y="222" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">7 bits (~2–3位)</text>
+  <text x="492" y="222" font-size="11.5" font-weight="600" fill="#b45309" font-family="'PingFang SC',sans-serif">2 Bytes · 无需 Loss Scaling，但步长粗！</text>
+
+  <!-- FP16: 1 + 5 + 10 = 16 bits -->
+  <text x="38" y="268" font-size="13.5" font-weight="700" fill="#0f172a" font-family="'SF Mono',monospace">FP16 (16 bit)</text>
+  <text x="38" y="284" font-size="11" fill="#64748b" font-family="'PingFang SC',sans-serif">老卡 (T4/V100)</text>
+  <rect x="170" y="250" width="19" height="34" rx="3" fill="#e11d48"/><text x="179.5" y="272" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">1</text>
+  <rect x="191" y="250" width="95" height="34" rx="3" fill="#2563eb"/><text x="238" y="271" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">5b (±65504)</text>
+  <rect x="288" y="250" width="190" height="34" rx="3" fill="#0d9488"/><text x="383" y="272" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">10 bits (~3–4 位数字)</text>
+  <text x="492" y="272" font-size="11.5" fill="#9f1239" font-family="'PingFang SC',sans-serif">2 Bytes · 最大仅 65504，训练易 NaN，须 GradScaler</text>
+
+  <!-- Real project pitfall box: BF16 ULP underflow -->
+  <rect x="34" y="306" width="852" height="106" rx="10" fill="#fff1f2" stroke="#e11d48" stroke-width="1.8"/>
+  <text x="52" y="330" font-size="13.5" font-weight="700" fill="#9f1239" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    真实 A100 踩坑实录：为什么 BF16 LoRA 在 lr = 1e-6 时 99.7% 参数“纹丝不动”？（ULP 吞噬效应）
+  </text>
+  <text x="52" y="354" font-size="12" fill="#334155" font-family="'PingFang SC','SF Mono',sans-serif">
+    1. 经过 SFT+DPO 后，lora_A 权重中位数约为 1.45×10⁻²；在 BF16（7 位尾数）下，该量级相邻两个可表示数的间距 ULP ≈ 1.22×10⁻⁴。
+  </text>
+  <text x="52" y="376" font-size="12" fill="#334155" font-family="'PingFang SC','SF Mono',sans-serif">
+    2. RL 阶段学习率 lr = 1×10⁻⁶，单步更新量 Δw ≈ 1×10⁻⁶ 远小于半个 ULP（6.1×10⁻⁵）→ 舍入回原值，相当于完全白算！
+  </text>
+  <text x="52" y="398" font-size="12" font-weight="700" fill="#065f46" font-family="'PingFang SC','SF Mono',sans-serif">
+    解药：基座保持 BF16（省显存），仅将 458 万 LoRA 权重设为 FP32 主权重（trainable_dtype: float32），只多占 9 MB 显存，100% 根治下溢！
+  </text>
+</svg>

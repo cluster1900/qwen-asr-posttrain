@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" width="920" height="420">
+  <defs>
+    <marker id="a10" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="920" height="420" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 5-2 个人与团队“选卡 + 训练方案”决策流程图（不花冤枉钱，永不盲目 OOM）</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">先用“参数量 P（单位十亿 B）”套速算公式，再按预算和卡的显存直接对号入座</text>
+
+  <!-- Step 1: Start -->
+  <rect x="220" y="70" width="480" height="44" rx="22" fill="#1e3a8a"/>
+  <text x="460" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" font-family="'PingFang SC',sans-serif">
+    Step 1：确定目标模型参数量 P（如 0.8B / 7B / 32B）
+  </text>
+
+  <!-- Three branches -->
+  <path d="M 380 114 L 160 150" stroke="#475569" stroke-width="2" marker-end="url(#a10)"/>
+  <path d="M 460 114 L 460 150" stroke="#475569" stroke-width="2" marker-end="url(#a10)"/>
+  <path d="M 540 114 L 760 150" stroke="#475569" stroke-width="2" marker-end="url(#a10)"/>
+
+  <!-- Branch 1: Small <= 3B -->
+  <rect x="28" y="154" width="268" height="170" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+  <text x="162" y="180" text-anchor="middle" font-size="13.5" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">
+    轻量级：P ≤ 3B（如 0.6B–3B）
+  </text>
+  <text x="44" y="204" font-size="11.5" fill="#1e293b" font-family="'PingFang SC',sans-serif">· BF16 LoRA 仅需 4–10 GB 显存</text>
+  <text x="44" y="224" font-size="11.5" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 推荐卡：RTX 4060Ti 16G / L4 24G</text>
+  <text x="44" y="244" font-size="11.5" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 进阶提速：Colab A100 40G/80G</text>
+  <text x="44" y="268" font-size="11.5" font-weight="700" fill="#047857" font-family="'PingFang SC',sans-serif">必开配置：</text>
+  <text x="44" y="288" font-size="11" fill="#065f46" font-family="'SF Mono',monospace">BF16 + FP32 LoRA + GradCkpt</text>
+  <text x="44" y="308" font-size="11" fill="#065f46" font-family="'PingFang SC',sans-serif">学生/个人入门首选，几块钱跑完闭环！</text>
+
+  <!-- Branch 2: Medium 7B - 14B -->
+  <rect x="326" y="154" width="268" height="170" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text x="460" y="180" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">
+    黄金甜点：7B – 14B 主力模型
+  </text>
+  <text x="342" y="204" font-size="11.5" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 16G–24G 卡 (T4/4090/L4)：</text>
+  <text x="350" y="222" font-size="11" font-weight="700" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">→ 7B 用 BF16 LoRA，14B 用 QLoRA</text>
+  <text x="342" y="244" font-size="11.5" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 40G–80G 卡 (A100/H100)：</text>
+  <text x="350" y="262" font-size="11" font-weight="700" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">→ 直接 BF16 LoRA + 离线/在线 RL</text>
+  <text x="342" y="288" font-size="11" fill="#1e40af" font-family="'SF Mono',monospace">显存估算：LoRA ≈ 2.2×P + 激活</text>
+  <text x="342" y="308" font-size="11" fill="#1e40af" font-family="'PingFang SC',sans-serif">性价比最高：租单卡 A100/4090 最划算</text>
+
+  <!-- Branch 3: Large 32B - 70B+ -->
+  <rect x="624" y="154" width="268" height="170" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+  <text x="758" y="180" text-anchor="middle" font-size="13.5" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">
+    重型主力：32B – 72B 大模型
+  </text>
+  <text x="638" y="204" font-size="11" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 单张 80G (A100/H100)：</text>
+  <text x="646" y="222" font-size="10.5" font-weight="700" fill="#b45309" font-family="'PingFang SC',sans-serif">→ 32B QLoRA(~24G) / 70B QLoRA(~48G)</text>
+  <text x="638" y="244" font-size="11" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 4–8× 80G (NVLink 集群)：</text>
+  <text x="646" y="262" font-size="10.5" font-weight="700" fill="#b45309" font-family="'PingFang SC',sans-serif">→ DeepSpeed ZeRO-3 / FSDP 全参/LoRA</text>
+  <text x="638" y="288" font-size="10.5" fill="#78350f" font-family="'SF Mono',monospace">全参估算：≈ 18×P GB (70B≈1.26TB)</text>
+  <text x="638" y="308" font-size="10.5" fill="#78350f" font-family="'PingFang SC',sans-serif">多卡务必看 NVLink，PCIe 会拖垮速度</text>
+
+  <!-- Bottom OOM emergency bar -->
+  <rect x="28" y="338" width="864" height="68" rx="10" fill="#fff1f2" stroke="#e11d48" stroke-width="1.6"/>
+  <text x="48" y="360" font-size="12" font-weight="700" fill="#9f1239" font-family="'PingFang SC',sans-serif">
+    显存不够（OOM）时的“黄金降压五连招”（按性价比从高到低依次开启）：
+  </text>
+  <text x="48" y="379" font-size="11.2" fill="#881337" font-family="'PingFang SC',sans-serif">
+    ① 减 micro_batch_size 增 grad_accum（数学等价！） → ② 开 Gradient Checkpointing → ③ 启用 FlashAttention/SDPA + Chunked CE
+  </text>
+  <text x="48" y="397" font-size="11.2" fill="#881337" font-family="'PingFang SC',sans-serif">
+    ④ 开启 expandable_segments:True 消碎片并换 8-bit AdamW → ⑤ 降为 QLoRA NF4（显存立降 70%）
+  </text>
+</svg>

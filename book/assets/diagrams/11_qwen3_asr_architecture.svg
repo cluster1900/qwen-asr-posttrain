@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500">
+  <defs>
+    <marker id="a11" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="a11t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0d9488"/>
+    </marker>
+    <marker id="a11b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect width="920" height="500" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 6-1 Qwen3-ASR-0.6B 端到端全架构总览（精确总参数量：782,426,112）</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">左耳听声音（AuT 编码器 · 186,376,192 参数 · 冻结） + 桥梁对齐（Projector） + 右脑说中文（Qwen3-0.6B · 596,049,920 参数 · 挂 LoRA）</text>
+
+  <!-- TOP TRACK: Audio Branch -->
+  <rect x="24" y="72" width="872" height="162" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.8"/>
+  <text x="40" y="94" font-size="13" font-weight="700" fill="#0f766e" font-family="'PingFang SC',sans-serif">
+    音频通路：thinker.audio_tower（共 186,376,192 参数 = 23.82%，本项目训练全程冻结）
+  </text>
+
+  <g font-family="'PingFang SC','SF Mono',sans-serif" text-anchor="middle">
+    <!-- 1. Raw Audio -->
+    <rect x="38" y="108" width="122" height="106" rx="8" fill="#ffffff" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="99" y="130" font-size="12" font-weight="700" fill="#134e4a">1. 声波 &amp; Mel</text>
+    <text x="99" y="150" font-size="10.5" fill="#334155">16 kHz PCM16</text>
+    <text x="99" y="166" font-size="10.5" fill="#334155">↓ STFT + Mel</text>
+    <text x="99" y="184" font-size="10.5" font-weight="700" fill="#0f766e">(1, 128, T)</text>
+    <text x="99" y="202" font-size="10" fill="#64748b">100 帧/秒 (10ms)</text>
+
+    <line x1="160" y1="161" x2="184" y2="161" stroke="#0d9488" stroke-width="2" marker-end="url(#a11t)"/>
+
+    <!-- 2. Conv2d Stem -->
+    <rect x="188" y="108" width="166" height="106" rx="8" fill="#ffffff" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="271" y="130" font-size="12" font-weight="700" fill="#134e4a">2. 3×Conv2d + conv_out</text>
+    <text x="271" y="149" font-size="10.5" fill="#334155">3 层 stride=2 (C=480)</text>
+    <text x="271" y="166" font-size="10.5" fill="#334155">8×降采样 → 12.5 帧/秒</text>
+    <text x="271" y="184" font-size="10.5" font-weight="700" fill="#0f766e">(T/8, 7680→896)</text>
+    <text x="271" y="202" font-size="10" fill="#64748b">11,034,240 参数</text>
+
+    <line x1="354" y1="161" x2="378" y2="161" stroke="#0d9488" stroke-width="2" marker-end="url(#a11t)"/>
+
+    <!-- 3. 18L AuT Encoder -->
+    <rect x="382" y="108" width="240" height="106" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+    <text x="502" y="130" font-size="12.5" font-weight="700" fill="#134e4a">3. 18 层 AuT 音频 Transformer</text>
+    <text x="502" y="149" font-size="10.5" fill="#134e4a">d_model=896 · 14 Heads (dim=64)</text>
+    <text x="502" y="166" font-size="10.5" fill="#134e4a">FFN=3584 (GELU) · LayerNorm</text>
+    <text x="502" y="184" font-size="10.5" font-weight="700" fill="#0f766e">双向窗口注意力提取音素特征</text>
+    <text x="502" y="202" font-size="10.5" font-weight="600" fill="#0f766e">173,617,920 参数 (18×9.65M)</text>
+
+    <line x1="622" y1="161" x2="646" y2="161" stroke="#0d9488" stroke-width="2" marker-end="url(#a11t)"/>
+
+    <!-- 4. Projector -->
+    <rect x="650" y="108" width="228" height="106" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+    <text x="764" y="130" font-size="12" font-weight="700" fill="#92400e">4. 跨模态投影器 (Bridge)</text>
+    <text x="764" y="149" font-size="10.5" fill="#78350f">ln_post (896) → proj1 (896→896)</text>
+    <text x="764" y="166" font-size="10.5" fill="#78350f">→ GELU → proj2 (896→1024)</text>
+    <text x="764" y="184" font-size="10.5" font-weight="700" fill="#b45309">输出音频 Token: (T_a, 1024)</text>
+    <text x="764" y="202" font-size="10" fill="#92400e">1,724,032 参数 · 对齐语言空间</text>
+  </g>
+
+  <!-- Connector arrow from Projector into Multimodal Fusion -->
+  <path d="M 764 214 L 764 252 L 266 252 L 266 276" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a11)"/>
+  <text x="520" y="247" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b45309" font-family="'PingFang SC',sans-serif">
+    将 (T_a, 1024) 音频向量原位替换进 Prompt 中的 &lt;|audio_pad|&gt; 占位槽！
+  </text>
+
+  <!-- BOTTOM TRACK: Text Decoder (Qwen3-0.6B) -->
+  <rect x="24" y="278" width="872" height="198" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="40" y="300" font-size="13" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">
+    语言解码器通路：thinker.model + lm_head（Qwen3-0.6B · 共 596,049,920 参数 = 76.18%，权重绑定）
+  </text>
+
+  <g font-family="'PingFang SC','SF Mono',sans-serif" text-anchor="middle">
+    <!-- 5. Token Embedding + Audio Merge -->
+    <rect x="38" y="316" width="252" height="114" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.6"/>
+    <text x="164" y="338" font-size="12" font-weight="700" fill="#1e3a8a">5. 词表嵌入 &amp; 多模态拼接</text>
+    <text x="164" y="357" font-size="10.5" fill="#334155">embed_tokens: 151,936 × 1,024</text>
+    <text x="164" y="374" font-size="9.8" fill="#1d4ed8">[system][音频向量][language Chinese]</text>
+    <text x="164" y="391" font-size="9.8" fill="#1d4ed8">[&lt;asr_text&gt;][转写汉字...][&lt;|im_end|&gt;]</text>
+    <text x="164" y="414" font-size="10" font-weight="600" fill="#475569">155,582,464 参数（与 lm_head 共享）</text>
+
+    <line x1="290" y1="373" x2="318" y2="373" stroke="#2563eb" stroke-width="2.2" marker-end="url(#a11b)"/>
+
+    <!-- 6. 28L Qwen3 Decoder + LoRA -->
+    <rect x="322" y="316" width="336" height="114" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+    <text x="490" y="338" font-size="12.5" font-weight="700" fill="#1e3a8a">6. 28 层 Qwen3 因果 Transformer</text>
+    <text x="490" y="357" font-size="10.5" fill="#1e293b">RMSNorm + GQA (16Q/8KV, head_dim=128) + QK-Norm</text>
+    <text x="490" y="374" font-size="10.5" fill="#1e293b">RoPE (θ=10⁶) + SwiGLU (1024→3072→1024)</text>
+    <rect x="342" y="384" width="296" height="24" rx="5" fill="#fef3c7" stroke="#d97706" stroke-width="1.4"/>
+    <text x="490" y="400" font-size="10.5" font-weight="700" fill="#92400e">★ 可训练 LoRA (r=16): q/k/v/o_proj = 4,587,520 参数</text>
+    <text x="490" y="423" font-size="10" fill="#1e40af">基座 28 层 + Final Norm = 440,467,456 参数</text>
+
+    <line x1="658" y1="373" x2="686" y2="373" stroke="#2563eb" stroke-width="2.2" marker-end="url(#a11b)"/>
+
+    <!-- 7. lm_head + Decoding -->
+    <rect x="690" y="316" width="188" height="114" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.8"/>
+    <text x="784" y="338" font-size="12" font-weight="700" fill="#065f46">7. lm_head &amp; 自回归解码</text>
+    <text x="784" y="357" font-size="10.5" fill="#334155">投影到 151,936 词表 Logits</text>
+    <text x="784" y="375" font-size="10.5" fill="#047857">评测：Greedy (argmax)</text>
+    <text x="784" y="392" font-size="10.5" fill="#047857">RL：1 Greedy + 3 Sample</text>
+    <text x="784" y="414" font-size="10.5" font-weight="700" fill="#065f46">输出中文转写 + EOS(151645)</text>
+  </g>
+
+  <!-- Tie weight dashed line -->
+  <path d="M 164 430 L 164 460 L 784 460 L 784 430" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5,3"/>
+  <text x="474" y="455" text-anchor="middle" font-size="11" font-weight="700" fill="#6d28d9" font-family="'PingFang SC',sans-serif">
+    tie_word_embeddings = True：输入 embed_tokens 与输出 lm_head 共享同一份 151,936×1,024 矩阵（省去 1.55 亿参数）
+  </text>
+</svg>

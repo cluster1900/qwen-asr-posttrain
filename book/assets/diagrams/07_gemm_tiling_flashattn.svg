@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" width="920" height="460">
+  <defs>
+    <marker id="ab7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+    <marker id="ar7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48"/>
+    </marker>
+    <marker id="ag7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0d9488"/>
+    </marker>
+  </defs>
+  <rect width="920" height="460" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 4-1 朴素 Attention vs FlashAttention：从 O(N²) 显存爆炸到片上 SRAM 分块流式计算</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">核心思想：不把巨大的 N×N 注意力分数矩阵 S、P 写回慢速 HBM，全在高速 SRAM 里通过 Online Softmax 边算边汇总</text>
+
+  <!-- Left: Standard Attention -->
+  <rect x="28" y="72" width="420" height="366" rx="10" fill="#ffffff" stroke="#e11d48" stroke-width="1.8"/>
+  <rect x="28" y="72" width="420" height="34" rx="10" fill="#ffe4e6"/>
+  <text x="238" y="94" text-anchor="middle" font-size="13.5" font-weight="700" fill="#9f1239" font-family="'PingFang SC',sans-serif">
+    ① 朴素 Attention（5 次大张量读写 HBM，显存 O(N²)）
+  </text>
+
+  <g font-family="'PingFang SC','SF Mono',sans-serif" font-size="12" text-anchor="middle">
+    <rect x="52" y="122" width="372" height="40" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+    <text x="238" y="146" font-weight="700" fill="#0f172a">HBM 显存：读取完整 Q, K (N×d)</text>
+
+    <line x1="238" y1="162" x2="238" y2="188" stroke="#e11d48" stroke-width="2" marker-end="url(#ar7)"/>
+    <rect x="52" y="192" width="372" height="50" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="238" y="213" font-weight="700" fill="#be123c">Kernel 1：计算 S = QKᵀ / √d</text>
+    <text x="238" y="232" font-size="11" fill="#9f1239">写回巨大 N×N 矩阵 S 到 HBM！（N=4096 单头占 32MB）</text>
+
+    <line x1="238" y1="242" x2="238" y2="268" stroke="#e11d48" stroke-width="2" marker-end="url(#ar7)"/>
+    <rect x="52" y="272" width="372" height="50" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="238" y="293" font-weight="700" fill="#be123c">Kernel 2：读回 S，算 P = Softmax(S)</text>
+    <text x="238" y="312" font-size="11" fill="#9f1239">再次把巨大 N×N 矩阵 P 写回 HBM！带宽彻底打满</text>
+
+    <line x1="238" y1="322" x2="238" y2="348" stroke="#e11d48" stroke-width="2" marker-end="url(#ar7)"/>
+    <rect x="52" y="352" width="372" height="44" rx="8" fill="#fee2e2" stroke="#e11d48"/>
+    <text x="238" y="371" font-weight="700" fill="#9f1239">Kernel 3：读回 P 与 V，算 O = PV → 写回 HBM</text>
+    <text x="238" y="388" font-size="11" fill="#be123c">HBM 总读写：Θ(Nd + N²) · 长序列直接爆显存</text>
+  </g>
+  <text x="238" y="424" text-anchor="middle" font-size="11.5" font-weight="600" fill="#be123c" font-family="'PingFang SC',sans-serif">
+    类比：切完一根葱放回冰箱，再拿出来加盐放回冰箱，再拿出来下锅
+  </text>
+
+  <!-- Right: FlashAttention -->
+  <rect x="472" y="72" width="420" height="366" rx="10" fill="#ffffff" stroke="#0d9488" stroke-width="2"/>
+  <rect x="472" y="72" width="420" height="34" rx="10" fill="#ccfbf1"/>
+  <text x="682" y="94" text-anchor="middle" font-size="13.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC',sans-serif">
+    ② FlashAttention-2（融合单 Kernel，显存仅 O(N)！）
+  </text>
+
+  <!-- HBM box -->
+  <rect x="494" y="120" width="376" height="46" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="682" y="140" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">
+    HBM 显存（仅存 Q, K, V, O 与行统计量 L，永不落地 N×N）
+  </text>
+  <text x="682" y="157" text-anchor="middle" font-size="11" fill="#1d4ed8" font-family="'SF Mono',monospace">
+    按块切分：Qᵢ (Bᵣ×d)  |  Kⱼ, Vⱼ (B_c×d)  (例如 Bᵣ=128, B_c=64)
+  </text>
+
+  <line x1="600" y1="166" x2="600" y2="192" stroke="#0d9488" stroke-width="2" marker-end="url(#ag7)"/>
+  <line x1="764" y1="192" x2="764" y2="166" stroke="#2563eb" stroke-width="2" marker-end="url(#ab7)"/>
+  <text x="540" y="184" font-size="10.5" fill="#0f766e" font-family="'PingFang SC',sans-serif">加载小块</text>
+  <text x="774" y="184" font-size="10.5" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">仅写最终 Oᵢ</text>
+
+  <!-- SRAM fused box -->
+  <rect x="494" y="196" width="376" height="198" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="682" y="218" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f766e" font-family="'PingFang SC',sans-serif">
+    片上高速 SRAM（~19 TB/s，单次 Fused CUDA Kernel 内完成！）
+  </text>
+
+  <rect x="514" y="230" width="336" height="36" rx="6" fill="#ffffff" stroke="#14b8a6"/>
+  <text x="682" y="253" text-anchor="middle" font-size="11.5" font-weight="600" fill="#134e4a" font-family="'SF Mono','PingFang SC',sans-serif">
+    Step 1: 算当前块 Sᵢⱼ = Qᵢ Kⱼᵀ / √d（仅 Bᵣ×B_c，塞进 SRAM）
+  </text>
+
+  <rect x="506" y="274" width="352" height="54" rx="6" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="682" y="294" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">
+    Step 2: Online Softmax 增量修正（数学 100% 精确等价！）
+  </text>
+  <text x="682" y="314" text-anchor="middle" font-size="9.8" fill="#78350f" font-family="'SF Mono',monospace">
+    m_new = max(m_old, rowmax(Sᵢⱼ));  α = exp(m_old - m_new)
+  </text>
+
+  <rect x="514" y="336" width="336" height="44" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="682" y="355" text-anchor="middle" font-size="11.5" font-weight="600" fill="#065f46" font-family="'SF Mono','PingFang SC',sans-serif">
+    Step 3: Oᵢ ← rescale·Oᵢ + exp(Sᵢⱼ - m_new)·Vⱼ
+  </text>
+  <text x="682" y="372" text-anchor="middle" font-size="10.5" fill="#047857" font-family="'PingFang SC',sans-serif">
+    循环遍历所有 Kⱼ, Vⱼ 块后，最后统一除以分母 lᵢ 写回 HBM！
+  </text>
+
+  <text x="682" y="424" text-anchor="middle" font-size="11.5" font-weight="600" fill="#0f766e" font-family="'PingFang SC',sans-serif">
+    HBM 读写降至 Θ(N²d² / M)，速度提升 2–4×，显存省 10×+！
+  </text>
+</svg>

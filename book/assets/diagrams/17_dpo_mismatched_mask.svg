@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 450" width="920" height="450">
+  <rect width="920" height="450" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 10-1 为什么朴素 DPO 会把中文语音训出“英文幻觉”？以及直通式差异掩码如何一键根治</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">真实工程血案数学解谜：同一句里只有 1 个字错了，为什么后面所有对的字都在承受有毒负梯度？</text>
+
+  <!-- Example token comparison -->
+  <rect x="28" y="72" width="864" height="176" rx="10" fill="#ffffff" stroke="#e11d48" stroke-width="1.8"/>
+  <text x="46" y="96" font-size="13.5" font-weight="700" fill="#9f1239" font-family="'PingFang SC',sans-serif">
+    ① 朴素整句序列和 DPO 的致命漏洞：共享后缀（占 58.9% token）吃进 88% 的有毒梯度！
+  </text>
+
+  <!-- Token boxes: Chosen vs Rejected -->
+  <g font-family="'PingFang SC',sans-serif" font-size="13" text-anchor="middle">
+    <text x="108" y="132" font-size="12" font-weight="700" fill="#065f46">Chosen (好 y_w):</text>
+    <rect x="172" y="112" width="76" height="30" rx="5" fill="#f1f5f9" stroke="#94a3b8"/><text x="210" y="132">纳</text>
+    <rect x="256" y="112" width="76" height="30" rx="5" fill="#f1f5f9" stroke="#94a3b8"/><text x="294" y="132">入</text>
+    <rect x="340" y="112" width="76" height="30" rx="5" fill="#d1fae5" stroke="#059669" stroke-width="2"/><text x="378" y="132" font-weight="700" fill="#065f46">监 (t₀)</text>
+    <rect x="424" y="112" width="76" height="30" rx="5" fill="#eff6ff" stroke="#3b82f6"/><text x="462" y="132">管</text>
+    <rect x="508" y="112" width="76" height="30" rx="5" fill="#eff6ff" stroke="#3b82f6"/><text x="546" y="132">体</text>
+    <rect x="592" y="112" width="76" height="30" rx="5" fill="#eff6ff" stroke="#3b82f6"/><text x="630" y="132">系</text>
+    <rect x="676" y="112" width="90" height="30" rx="5" fill="#eff6ff" stroke="#3b82f6"/><text x="721" y="132" font-size="11.5">&lt;|im_end|&gt;</text>
+
+    <text x="108" y="176" font-size="12" font-weight="700" fill="#be123c">Rejected (坏 y_l):</text>
+    <rect x="172" y="156" width="76" height="30" rx="5" fill="#f1f5f9" stroke="#94a3b8"/><text x="210" y="176">纳</text>
+    <rect x="256" y="156" width="76" height="30" rx="5" fill="#f1f5f9" stroke="#94a3b8"/><text x="294" y="176">入</text>
+    <rect x="340" y="156" width="76" height="30" rx="5" fill="#ffe4e6" stroke="#e11d48" stroke-width="2"/><text x="378" y="176" font-weight="700" fill="#9f1239">结 (t₀)</text>
+    <rect x="424" y="156" width="76" height="30" rx="5" fill="#fff1f2" stroke="#e11d48" stroke-dasharray="4,2"/><text x="462" y="176" fill="#be123c">管</text>
+    <rect x="508" y="156" width="76" height="30" rx="5" fill="#fff1f2" stroke="#e11d48" stroke-dasharray="4,2"/><text x="546" y="176" fill="#be123c">体</text>
+    <rect x="592" y="156" width="76" height="30" rx="5" fill="#fff1f2" stroke="#e11d48" stroke-dasharray="4,2"/><text x="630" y="176" fill="#be123c">系</text>
+    <rect x="676" y="156" width="90" height="30" rx="5" fill="#fff1f2" stroke="#e11d48" stroke-dasharray="4,2"/><text x="721" y="176" font-size="11.5" fill="#be123c">&lt;|im_end|&gt;</text>
+  </g>
+
+  <!-- Three non-overlapping explanation boxes -->
+  <rect x="44" y="196" width="234" height="44" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="161" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="#475569" font-family="'PingFang SC',sans-serif">共享前缀 (t &lt; t₀)</text>
+  <text x="161" y="231" text-anchor="middle" font-size="10" fill="#64748b" font-family="'PingFang SC',sans-serif">上下文相同，正负梯度精确抵消为 0</text>
+
+  <rect x="288" y="196" width="184" height="44" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="380" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="#059669" font-family="'PingFang SC',sans-serif">唯一分叉点 t₀</text>
+  <text x="380" y="231" text-anchor="middle" font-size="10" fill="#047857" font-family="'PingFang SC',sans-serif">c⁺ ≡ c⁻，log Z 完美抵消！</text>
+
+  <rect x="482" y="196" width="394" height="44" rx="6" fill="#fff1f2" stroke="#fb7185"/>
+  <text x="679" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="#be123c" font-family="'PingFang SC',sans-serif">有毒共享后缀 (t &gt; t₀)：前缀 c⁺(“监”) ≠ c⁻(“结”)！</text>
+  <text x="679" y="231" text-anchor="middle" font-size="9.8" fill="#9f1239" font-family="'PingFang SC',sans-serif">log Z 不抵消 → 惩罚正确后缀字与 EOS，催生英文幻觉！</text>
+
+  <!-- Solution Panel -->
+  <rect x="28" y="264" width="864" height="168" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+  <text x="46" y="290" font-size="13.5" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">
+    ② 本项目优雅解法：mismatched_only 直通式梯度掩码（Straight-Through Estimator，见 train/train_dpo.py）
+  </text>
+
+  <!-- Code box -->
+  <rect x="46" y="304" width="446" height="110" rx="8" fill="#0f172a"/>
+  <text x="62" y="328" font-size="11.5" fill="#94a3b8" font-family="'SF Mono',monospace"># 前向：保持完整整句 logp（与离线 Ref 严格对齐！）</text>
+  <text x="62" y="350" font-size="12" fill="#e2e8f0" font-family="'SF Mono',monospace">full_nll = sup_nll.sum()</text>
+  <text x="62" y="372" font-size="12" fill="#38bdf8" font-family="'SF Mono',monospace">diff_nll = sup_nll[token_mask].sum()</text>
+  <text x="62" y="396" font-size="12.5" font-weight="700" fill="#fbbf24" font-family="'SF Mono',monospace">return diff_nll + (full_nll - diff_nll).detach()</text>
+
+  <!-- Math explanation box -->
+  <rect x="508" y="304" width="366" height="110" rx="8" fill="#ffffff" stroke="#10b981"/>
+  <text x="524" y="327" font-size="12" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">一行 .detach() 为什么这么神？</text>
+  <text x="524" y="349" font-size="11" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 前向数值 = full_nll（与离线 Reference 完整对齐）</text>
+  <text x="524" y="369" font-size="11" fill="#1e293b" font-family="'PingFang SC',sans-serif">· 反向梯度 = ∇diff_nll（只在差异点 t₀ 求导！）</text>
+  <text x="524" y="389" font-size="11" fill="#047857" font-weight="700" font-family="'PingFang SC',sans-serif">· 结果：共享后缀与 EOS 梯度 = 0，静音幻觉清零！</text>
+  <text x="524" y="406" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">（配合 0.05 权重父版本 Dropout Anchor 稳住静音段）</text>
+</svg>

@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 490" width="920" height="490">
+  <defs>
+    <marker id="a13" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="a13b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+    <marker id="a13o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#d97706"/>
+    </marker>
+  </defs>
+  <rect width="920" height="490" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 8-1 Qwen3-0.6B 单个 Decoder Layer 内部显微镜（28 层重复，单层 15,730,944 参数）</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">关键发现：hidden_size=1024，但 16 头 × head_dim 128 = 2048！所以 Q 投影升维到 2048，K/V 保持 1024（GQA 2:1）</text>
+
+  <!-- Input x -->
+  <rect x="330" y="68" width="260" height="32" rx="8" fill="#1e293b"/>
+  <text x="460" y="89" text-anchor="middle" font-size="12.5" font-weight="700" fill="#ffffff" font-family="'SF Mono','PingFang SC',sans-serif">
+    输入隐状态 x : [Batch, Seq, 1024]
+  </text>
+
+  <!-- Residual bypass 1 (left side) -->
+  <path d="M 330 84 L 54 84 L 54 312 L 440 312" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#a13b)"/>
+  <text x="34" y="198" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8" transform="rotate(-90 34 198)" font-family="'PingFang SC',sans-serif">残差高速路 1 (+x)</text>
+
+  <!-- Attention Block container -->
+  <rect x="86" y="114" width="800" height="178" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>
+  <text x="102" y="135" font-size="12.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">
+    前半层：分组查询自注意力 GQA（6,291,712 基座参数 + 本项目 4 个 LoRA 插入点共 163,840 可训练参数/层）
+  </text>
+
+  <line x1="460" y1="100" x2="460" y2="146" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+
+  <!-- input_layernorm -->
+  <rect x="104" y="148" width="128" height="44" rx="7" fill="#ede9fe" stroke="#7c3aed"/>
+  <text x="168" y="167" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6" font-family="'SF Mono',sans-serif">input_layernorm</text>
+  <text x="168" y="183" text-anchor="middle" font-size="10.5" fill="#6d28d9" font-family="'PingFang SC',sans-serif">RMSNorm (1024)</text>
+
+  <line x1="232" y1="170" x2="260" y2="170" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+
+  <!-- Q / K / V projections with LoRA badge -->
+  <rect x="264" y="146" width="166" height="40" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+  <text x="347" y="163" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e" font-family="'SF Mono',sans-serif">q_proj + LoRA★</text>
+  <text x="347" y="179" text-anchor="middle" font-size="10.5" fill="#b45309" font-family="'SF Mono',monospace">1024→2048 (16×128)</text>
+
+  <rect x="264" y="192" width="166" height="40" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+  <text x="347" y="209" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e" font-family="'SF Mono',sans-serif">k_proj + LoRA★</text>
+  <text x="347" y="225" text-anchor="middle" font-size="10.5" fill="#b45309" font-family="'SF Mono',monospace">1024→1024 (8×128)</text>
+
+  <rect x="264" y="238" width="166" height="40" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+  <text x="347" y="255" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e" font-family="'SF Mono',sans-serif">v_proj + LoRA★</text>
+  <text x="347" y="271" text-anchor="middle" font-size="10.5" fill="#b45309" font-family="'SF Mono',monospace">1024→1024 (8×128)</text>
+
+  <!-- QK-Norm + RoPE -->
+  <line x1="430" y1="166" x2="454" y2="166" stroke="#475569" stroke-width="1.6" marker-end="url(#a13)"/>
+  <line x1="430" y1="212" x2="454" y2="212" stroke="#475569" stroke-width="1.6" marker-end="url(#a13)"/>
+  <rect x="458" y="148" width="124" height="82" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="520" y="170" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6" font-family="'PingFang SC',sans-serif">q_norm / k_norm</text>
+  <text x="520" y="187" text-anchor="middle" font-size="10.5" fill="#6d28d9" font-family="'PingFang SC',sans-serif">每头 128维 RMSNorm</text>
+  <text x="520" y="205" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">+ RoPE 旋转</text>
+  <text x="520" y="221" text-anchor="middle" font-size="10" fill="#64748b" font-family="'SF Mono',monospace">θ = 1,000,000</text>
+
+  <!-- SDPA / FlashAttention -->
+  <line x1="582" y1="189" x2="606" y2="189" stroke="#475569" stroke-width="1.6" marker-end="url(#a13)"/>
+  <path d="M 430 258 L 656 258 L 656 236" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a13)"/>
+  <rect x="610" y="148" width="122" height="84" rx="7" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.8"/>
+  <text x="671" y="171" text-anchor="middle" font-size="11.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC',sans-serif">因果 SDPA /</text>
+  <text x="671" y="188" text-anchor="middle" font-size="11.5" font-weight="700" fill="#134e4a" font-family="'PingFang SC',sans-serif">FlashAttention</text>
+  <text x="671" y="207" text-anchor="middle" font-size="10" fill="#0f766e" font-family="'PingFang SC',sans-serif">2个Q共享1个KV</text>
+  <text x="671" y="223" text-anchor="middle" font-size="10" font-weight="600" fill="#0f766e" font-family="'SF Mono',monospace">→ [B, S, 2048]</text>
+
+  <!-- o_proj -->
+  <line x1="732" y1="190" x2="754" y2="190" stroke="#475569" stroke-width="1.6" marker-end="url(#a13)"/>
+  <rect x="758" y="156" width="114" height="68" rx="7" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+  <text x="815" y="181" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e" font-family="'SF Mono',sans-serif">o_proj</text>
+  <text x="815" y="198" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" font-family="'SF Mono',sans-serif">+ LoRA★</text>
+  <text x="815" y="215" text-anchor="middle" font-size="10" fill="#78350f" font-family="'SF Mono',monospace">2048→1024</text>
+
+  <!-- Residual Add 1 -->
+  <path d="M 815 224 L 815 312 L 480 312" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+  <circle cx="460" cy="312" r="16" fill="#2563eb"/>
+  <text x="460" y="318" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">+</text>
+  <text x="530" y="307" font-size="11" font-weight="600" fill="#1e3a8a" font-family="'SF Mono',monospace">h₁ = x + Attn(Norm(x))</text>
+
+  <!-- Residual bypass 2 (left side) -->
+  <path d="M 444 312 L 54 312 L 54 456 L 440 456" fill="none" stroke="#0d9488" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#a13)"/>
+  <text x="34" y="388" text-anchor="middle" font-size="11" font-weight="700" fill="#0f766e" transform="rotate(-90 34 388)" font-family="'PingFang SC',sans-serif">残差高速路 2 (+h₁)</text>
+
+  <!-- MLP Block container -->
+  <rect x="86" y="340" width="800" height="92" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.8"/>
+  <text x="102" y="360" font-size="12.5" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">
+    后半层：SwiGLU 前馈知识库（9,438,208 基座参数 = 占单层 60%！存储语言事实与搭配记忆）
+  </text>
+
+  <line x1="460" y1="328" x2="460" y2="340" stroke="#475569" stroke-width="1.8"/>
+
+  <g font-family="'PingFang SC','SF Mono',sans-serif" text-anchor="middle" font-size="11">
+    <rect x="104" y="372" width="144" height="46" rx="6" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="176" y="391" font-weight="700" fill="#5b21b6">post_attn_layernorm</text>
+    <text x="176" y="408" font-size="10" fill="#6d28d9">RMSNorm (1024)</text>
+
+    <line x1="248" y1="395" x2="278" y2="395" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+
+    <rect x="282" y="372" width="210" height="46" rx="6" fill="#ffffff" stroke="#10b981"/>
+    <text x="387" y="391" font-weight="700" fill="#065f46">SiLU(gate_proj) ⊙ up_proj</text>
+    <text x="387" y="408" font-size="10" fill="#047857">双路 1024 → 3072 (各 3.15M 参数)</text>
+
+    <line x1="492" y1="395" x2="522" y2="395" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+
+    <rect x="526" y="372" width="166" height="46" rx="6" fill="#ffffff" stroke="#10b981"/>
+    <text x="609" y="391" font-weight="700" fill="#065f46">down_proj</text>
+    <text x="609" y="408" font-size="10" fill="#047857">3072 → 1024 (3.15M 参数)</text>
+
+    <line x1="692" y1="395" x2="722" y2="395" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+
+    <rect x="726" y="372" width="146" height="46" rx="6" fill="#d1fae5" stroke="#059669"/>
+    <text x="799" y="391" font-weight="700" fill="#065f46">输出回流残差 2</text>
+    <text x="799" y="408" font-size="10" fill="#047857">h₂ = h₁ + MLP(...)</text>
+  </g>
+
+  <!-- Residual Add 2 -->
+  <path d="M 799 418 L 799 456 L 480 456" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#a13)"/>
+  <circle cx="460" cy="456" r="16" fill="#0d9488"/>
+  <text x="460" y="462" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">+</text>
+  <text x="622" y="476" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0f766e" font-family="'SF Mono','PingFang SC',sans-serif">
+    送入第 l+1 层，形状保持不变：[Batch, Seq, 1024]
+  </text>
+</svg>

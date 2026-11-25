@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 440" width="920" height="440">
+  <rect width="920" height="440" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 5-1 大模型训练显存“四大吞金兽”拆解对比（以 7B 模型 &amp; Qwen3-ASR-0.6B 为例）</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">为什么 14 GB 的 7B 模型全量训练居然要吃掉 &gt;120 GB 显存，而 LoRA/QLoRA 却能塞进单张 24GB 显卡？</text>
+
+  <!-- Legend -->
+  <g font-family="'PingFang SC',sans-serif" font-size="11.5">
+    <rect x="130" y="68" width="14" height="14" rx="3" fill="#2563eb"/><text x="150" y="80" fill="#334155">模型权重 (Params)</text>
+    <rect x="285" y="68" width="14" height="14" rx="3" fill="#0d9488"/><text x="305" y="80" fill="#334155">梯度 (Gradients)</text>
+    <rect x="430" y="68" width="14" height="14" rx="3" fill="#e11d48"/><text x="450" y="80" fill="#334155">AdamW 优化器状态 (FP32 主权重+m+v)</text>
+    <rect x="690" y="68" width="14" height="14" rx="3" fill="#f59e0b"/><text x="710" y="80" fill="#334155">激活值 + 框架缓冲</text>
+  </g>
+
+  <!-- Section A: 7B LLM Comparison (Scale: 1 GB = 4.6 px, x starts at 210) -->
+  <text x="34" y="114" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">
+    案例 A：典型 7B 大模型（约 70 亿参数，Seq=2048，开启 Gradient Checkpointing）
+  </text>
+
+  <!-- Bar 1: 7B Full FT BF16 + FP32 AdamW = 14 + 14 + 84 + ~16 = 128 GB (scale: 4.0 px/GB) -->
+  <text x="34" y="148" font-size="12" font-weight="700" fill="#0f172a" font-family="'PingFang SC',sans-serif">全参混合精度微调</text>
+  <text x="34" y="164" font-size="10.5" fill="#64748b" font-family="'SF Mono',monospace">~16–18 Bytes/Param</text>
+  <rect x="210" y="132" width="56" height="32" fill="#2563eb"/><text x="238" y="152" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">14G</text>
+  <rect x="266" y="132" width="56" height="32" fill="#0d9488"/><text x="294" y="152" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">14G</text>
+  <rect x="322" y="132" width="336" height="32" fill="#e11d48"/><text x="490" y="152" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">84 GB（FP32副本28G + m 28G + v 28G！）</text>
+  <rect x="658" y="132" width="64" height="32" fill="#f59e0b"/><text x="690" y="152" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">~16G</text>
+  <text x="732" y="153" font-size="12" font-weight="700" fill="#9f1239" font-family="'SF Mono','PingFang SC',sans-serif">≈128 GB (需2×A100)</text>
+
+  <!-- Bar 2: 7B LoRA BF16 (trainable 1% = 70M) = 14 + 0.14 + 0.84 + ~4 = ~19 GB -->
+  <text x="34" y="200" font-size="12" font-weight="700" fill="#0f766e" font-family="'PingFang SC',sans-serif">BF16 LoRA (r=16)</text>
+  <text x="34" y="216" font-size="10.5" fill="#64748b" font-family="'SF Mono',monospace">仅训 ~1% 参数</text>
+  <rect x="210" y="184" width="64" height="32" fill="#2563eb"/><text x="242" y="204" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">14G</text>
+  <rect x="274" y="184" width="6" height="32" fill="#e11d48"/>
+  <rect x="280" y="184" width="22" height="32" fill="#f59e0b"/>
+  <text x="312" y="205" font-size="12" font-weight="700" fill="#0f766e" font-family="'PingFang SC','SF Mono',sans-serif">
+    ≈ 19 GB（梯度+优化器缩水 100 倍至 ~1 GB！单张 RTX 4090 / L4 24GB 稳跑）
+  </text>
+
+  <!-- Bar 3: 7B QLoRA NF4 = 4.2 + 0.14 + 0.84 + ~4 = ~9.5 GB -->
+  <text x="34" y="252" font-size="12" font-weight="700" fill="#b45309" font-family="'PingFang SC',sans-serif">QLoRA (NF4 4-bit)</text>
+  <text x="34" y="268" font-size="10.5" fill="#64748b" font-family="'SF Mono',monospace">基座 4-bit 量化</text>
+  <rect x="210" y="236" width="20" height="32" fill="#2563eb"/>
+  <rect x="230" y="236" width="6" height="32" fill="#e11d48"/>
+  <rect x="236" y="236" width="20" height="32" fill="#f59e0b"/>
+  <text x="266" y="257" font-size="12" font-weight="700" fill="#b45309" font-family="'PingFang SC','SF Mono',sans-serif">
+    ≈ 9.5–11 GB（基座压至 ~4.2 GB，连 Colab 免费 T4 16GB 都能训 7B！）
+  </text>
+
+  <!-- Divider -->
+  <line x1="34" y1="292" x2="886" y2="292" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- Section B: Qwen3-ASR-0.6B exact real numbers (Scale: 1 GB = 28 px) -->
+  <text x="34" y="320" font-size="13.5" font-weight="700" fill="#0f766e" font-family="'PingFang SC',sans-serif">
+    案例 B：本项目实测标杆 Qwen3-ASR-0.6B（精确 782,426,112 基座参数 + 4,587,520 LoRA 参数）
+  </text>
+
+  <!-- Full FT 0.6B: 1.56 + 1.56 + 9.39 + ~2.5 = ~15 GB -->
+  <text x="34" y="354" font-size="12" font-weight="700" fill="#0f172a" font-family="'PingFang SC',sans-serif">全参微调 (0.78B)</text>
+  <rect x="210" y="336" width="44" height="28" fill="#2563eb"/><text x="232" y="354" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">1.56G</text>
+  <rect x="254" y="336" width="44" height="28" fill="#0d9488"/><text x="276" y="354" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">1.56G</text>
+  <rect x="298" y="336" width="263" height="28" fill="#e11d48"/><text x="429" y="354" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">AdamW 优化器状态 9.39 GB</text>
+  <rect x="561" y="336" width="76" height="28" fill="#f59e0b"/><text x="599" y="354" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">~2.7G 激活</text>
+  <text x="646" y="355" font-size="12" font-weight="700" fill="#9f1239" font-family="'SF Mono',monospace">≈ 15.2 GB</text>
+
+  <!-- LoRA 0.6B: 1.56 + 0.018 + 0.055 + ~2.5 = ~4.2 GB! -->
+  <text x="34" y="398" font-size="12" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">本项目 LoRA (r=16)</text>
+  <rect x="210" y="380" width="44" height="28" fill="#2563eb"/><text x="232" y="398" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">1.56G</text>
+  <rect x="254" y="380" width="4" height="28" fill="#e11d48"/>
+  <rect x="258" y="380" width="70" height="28" fill="#f59e0b"/><text x="293" y="398" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">激活+缓冲</text>
+  <text x="338" y="399" font-size="11.5" font-weight="700" fill="#065f46" font-family="'PingFang SC','SF Mono',sans-serif">
+    ≈ 4.2–6.0 GB！（FP32 LoRA 权重 18MB + 梯度 18MB + AdamW 37MB = 仅 73 MB！）
+  </text>
+</svg>

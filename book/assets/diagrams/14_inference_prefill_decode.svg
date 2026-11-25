@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" width="920" height="460">
+  <defs>
+    <marker id="a14b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+    <marker id="a14t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0d9488"/>
+    </marker>
+    <marker id="a14o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#d97706"/>
+    </marker>
+  </defs>
+  <rect width="920" height="460" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 8-2 大模型推理完整时序图：Prefill（并行首字填充）与 Decode（KV Cache 自回归吐字）</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">看懂为什么推理分为“算力受限的 Prefill”和“显存带宽受限的 Decode”，以及 KV Cache 为何能把速度提高数十倍</text>
+
+  <!-- Lifelines -->
+  <g font-family="'PingFang SC',sans-serif" font-size="12.5" font-weight="700" text-anchor="middle">
+    <rect x="44" y="70" width="144" height="36" rx="8" fill="#1e293b"/><text x="116" y="93" fill="#ffffff">输入 / Processor</text>
+    <rect x="244" y="70" width="156" height="36" rx="8" fill="#0d9488"/><text x="322" y="93" fill="#ffffff">Audio Encoder</text>
+    <rect x="460" y="70" width="176" height="36" rx="8" fill="#2563eb"/><text x="548" y="93" fill="#ffffff">Qwen3 Decoder (28L)</text>
+    <rect x="696" y="70" width="180" height="36" rx="8" fill="#d97706"/><text x="786" y="93" fill="#ffffff">KV Cache (GPU HBM)</text>
+  </g>
+  <line x1="116" y1="106" x2="116" y2="432" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="322" y1="106" x2="322" y2="432" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="548" y1="106" x2="548" y2="432" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="786" y1="106" x2="786" y2="432" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+  <!-- Phase 1 banner: Prefill -->
+  <rect x="26" y="120" width="868" height="126" rx="8" fill="#eff6ff" fill-opacity="0.65" stroke="#93c5fd" stroke-dasharray="4,3"/>
+  <text x="40" y="138" font-size="12" font-weight="700" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">
+    阶段一：Prefill 预填充（一次性并行处理全部 Prompt + 音频 Token → Compute-Bound，决定首字延迟 TTFT）
+  </text>
+
+  <!-- Seq arrows in Prefill -->
+  <line x1="116" y1="158" x2="314" y2="158" stroke="#0d9488" stroke-width="2" marker-end="url(#a14t)"/>
+  <text x="215" y="152" text-anchor="middle" font-size="11" fill="#0f766e" font-family="'PingFang SC',sans-serif">1. 送入 128-bin Log-Mel</text>
+
+  <line x1="322" y1="184" x2="540" y2="184" stroke="#0d9488" stroke-width="2" marker-end="url(#a14t)"/>
+  <text x="431" y="178" text-anchor="middle" font-size="11" fill="#0f766e" font-family="'PingFang SC',sans-serif">2. 输出 50 个音频向量 + Prompt 拼成 L₀ 个 Token</text>
+
+  <line x1="548" y1="212" x2="778" y2="212" stroke="#d97706" stroke-width="2" marker-end="url(#a14o)"/>
+  <text x="663" y="206" text-anchor="middle" font-size="11" font-weight="600" fill="#b45309" font-family="'PingFang SC',sans-serif">3. 写入 28 层初始 K₀..L₀, V₀..L₀</text>
+
+  <line x1="548" y1="234" x2="124" y2="234" stroke="#2563eb" stroke-width="2" marker-end="url(#a14b)"/>
+  <text x="336" y="229" text-anchor="middle" font-size="11" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">4. 吐出第 1 个汉字 y₁（如“今”）← TTFT 完成！</text>
+
+  <!-- Phase 2 banner: Decode Loop -->
+  <rect x="26" y="258" width="868" height="162" rx="8" fill="#fffbeb" fill-opacity="0.65" stroke="#fcd34d" stroke-dasharray="4,3"/>
+  <text x="40" y="276" font-size="12" font-weight="700" fill="#b45309" font-family="'PingFang SC',sans-serif">
+    阶段二：Decode 自回归循环（每次只送入刚生成的 1 个新 Token → Memory-Bound，靠 KV Cache 避免重复算历史！）
+  </text>
+
+  <!-- Step t=2 -->
+  <line x1="116" y1="302" x2="540" y2="302" stroke="#2563eb" stroke-width="2" marker-end="url(#a14b)"/>
+  <text x="328" y="296" text-anchor="middle" font-size="11" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">5. 仅送入 1 个新词 y₁(“今”)（不再重跑音频编码器与历史 Prompt!）</text>
+
+  <line x1="786" y1="326" x2="556" y2="326" stroke="#d97706" stroke-width="2" marker-end="url(#a14o)"/>
+  <text x="671" y="320" text-anchor="middle" font-size="11" fill="#92400e" font-family="'PingFang SC',sans-serif">6. 读出历史 K, V；并追加写入新 (k₁, v₁)</text>
+
+  <line x1="548" y1="352" x2="124" y2="352" stroke="#2563eb" stroke-width="2" marker-end="url(#a14b)"/>
+  <text x="336" y="346" text-anchor="middle" font-size="11" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">7. 算出 y₂(“天”) → 循环喂回直到生成 &lt;|im_end|&gt; (ID 151645)</text>
+
+  <!-- Stop condition box -->
+  <rect x="48" y="370" width="824" height="38" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="460" y="394" text-anchor="middle" font-size="11.2" font-weight="700" fill="#065f46" font-family="'PingFang SC','SF Mono',sans-serif">
+    Qwen3-0.6B KV Cache 省了多少显存？GQA (8 KV头 vs 16 Q头) 直接砍半：每 Token 仅占 2 × 28 × 8 × 128 × 2B = 112 KiB！
+  </text>
+</svg>

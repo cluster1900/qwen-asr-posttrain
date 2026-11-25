@@ -1,0 +1,294 @@
+/* Print / PDF Stylesheet for Chrome Headless Paged Media */
+@page {
+  size: A4;
+  margin: 20mm 16mm 22mm 16mm;
+  @top-left {
+    content: "从零到一：大模型底层原理、GPU 算子优化与任意模型后训练实战";
+    font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    font-size: 8.5pt;
+    color: #64748b;
+  }
+  @bottom-center {
+    content: "— " counter(page) " —";
+    font-family: "SF Mono", "PingFang SC", sans-serif;
+    font-size: 9pt;
+    color: #475569;
+  }
+}
+
+@page :first {
+  margin: 0;
+  @top-left { content: none; }
+  @bottom-center { content: none; }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  font-size: 10.2pt;
+  line-height: 1.72;
+}
+
+/* Full-bleed cover page */
+.print-cover {
+  width: 210mm;
+  height: 297mm;
+  margin: 0;
+  padding: 0;
+  page-break-after: always;
+  break-after: page;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1120;
+  overflow: hidden;
+}
+.print-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Print TOC page */
+.print-toc {
+  page-break-after: always;
+  break-after: page;
+}
+.print-toc h1 {
+  break-before: auto;
+  page-break-before: auto;
+  margin-top: 0;
+  margin-bottom: 8pt;
+  font-size: 18pt;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 4pt;
+}
+.print-toc ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 2pt 0;
+}
+.print-toc ul ul {
+  padding-left: 14pt;
+  margin: 1pt 0 2pt;
+}
+.print-toc a {
+  color: #1e293b;
+  text-decoration: none;
+  font-size: 8.6pt;
+  line-height: 1.36;
+}
+.print-toc > nav > ul > li > a {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 9.1pt;
+}
+
+/* Headings & Page breaks */
+h1 {
+  font-size: 17.5pt;
+  color: #0f172a;
+  margin-top: 0;
+  margin-bottom: 12pt;
+  padding-bottom: 5pt;
+  border-bottom: 2px solid #2563eb;
+  break-before: page;
+  page-break-before: always;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+h1.part-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 5px solid #2563eb;
+  padding: 12pt 14pt;
+  border-radius: 6pt;
+  font-size: 14pt;
+  color: #1d4ed8;
+  margin-bottom: 16pt;
+  break-before: page;
+  page-break-before: always;
+  break-after: avoid;
+}
+h1.part-banner + h1 {
+  break-before: auto;
+  page-break-before: auto;
+  margin-top: 8pt;
+}
+h2 {
+  font-size: 13pt;
+  color: #0f172a;
+  margin-top: 16pt;
+  margin-bottom: 6pt;
+  padding-bottom: 3pt;
+  border-bottom: 0.75pt solid #cbd5e1;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+h3 {
+  font-size: 11pt;
+  color: #1e293b;
+  margin-top: 12pt;
+  margin-bottom: 4pt;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+h4 {
+  font-size: 10.2pt;
+  color: #1d4ed8;
+  margin-top: 9pt;
+  break-after: avoid;
+}
+
+p {
+  margin: 6pt 0;
+  text-align: justify;
+  orphans: 3;
+  widows: 3;
+}
+
+blockquote {
+  margin: 10pt 0;
+  padding: 8pt 12pt;
+  border-left: 3pt solid #2563eb;
+  background: #f8fafc;
+  color: #334155;
+  break-inside: avoid;
+}
+blockquote p:first-child { margin-top: 0; }
+blockquote p:last-child { margin-bottom: 0; }
+
+/* Callouts */
+.callout {
+  margin: 10pt 0;
+  padding: 9pt 12pt;
+  border-radius: 6pt;
+  border: 0.75pt solid #cbd5e1;
+  border-left-width: 3.5pt;
+  background: #f8fafc;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.callout-title {
+  font-weight: 700;
+  font-size: 10.2pt;
+  margin-bottom: 5pt;
+}
+.callout-tip { border-left-color: #0d9488; background: #f0fdfa; }
+.callout-tip .callout-title { color: #0f766e; }
+.callout-warning { border-left-color: #e11d48; background: #fff1f2; }
+.callout-warning .callout-title { color: #be123c; }
+.callout-example { border-left-color: #2563eb; background: #eff6ff; }
+.callout-example .callout-title { color: #1d4ed8; }
+.callout-note { border-left-color: #d97706; background: #fffbeb; }
+.callout-note .callout-title { color: #b45309; }
+
+/* Figures */
+figure {
+  margin: 11pt 0;
+  text-align: center;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+figure img, p > img {
+  max-width: 100%;
+  max-height: 135mm;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+figcaption {
+  margin-top: 4pt;
+  font-size: 8.6pt;
+  color: #64748b;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10pt 0;
+  font-size: 8.8pt;
+  line-height: 1.48;
+  break-inside: auto;
+}
+thead { display: table-header-group; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+thead th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 5.5pt 6.5pt;
+  border-bottom: 1.2pt solid #94a3b8;
+  text-align: left;
+}
+tbody td {
+  padding: 5pt 6.5pt;
+  border-bottom: 0.5pt solid #cbd5e1;
+  vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8fafc; }
+
+/* Code */
+code {
+  font-family: "SF Mono", "Menlo", Consolas, monospace;
+  font-size: 8.6pt;
+  background: #f1f5f9;
+  color: #be123c;
+  padding: 1pt 3.5pt;
+  border-radius: 3pt;
+  overflow-wrap: anywhere;
+}
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 9pt 11pt;
+  border-radius: 6pt;
+  font-size: 8.1pt;
+  line-height: 1.46;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 9pt 0;
+  break-inside: avoid;
+}
+pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: 1em;
+}
+code span.kw { color: #7dd3fc; font-weight: 600; }
+code span.cf { color: #c084fc; font-weight: 600; }
+code span.dt { color: #38bdf8; }
+code span.fu { color: #60a5fa; }
+code span.st, code span.ch { color: #86efac; }
+code span.dv, code span.fl, code span.bn { color: #fbbf24; }
+code span.co { color: #94a3b8; font-style: italic; }
+code span.bu { color: #f472b6; }
+
+/* MathML */
+p:has(> math[display="block"]) {
+  text-align: center;
+  margin: 8pt 0;
+  break-inside: avoid;
+}
+math {
+  font-family: "STIX Two Math", "Latin Modern Math", "Apple Symbols", serif;
+  font-size: 10.2pt;
+}
+math[display="block"] {
+  display: inline-block;
+  margin: 0 auto;
+}
+
+hr {
+  border: none;
+  border-top: 0.75pt solid #e2e8f0;
+  margin: 12pt 0;
+}

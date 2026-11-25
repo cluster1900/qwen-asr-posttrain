@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 430" width="920" height="430">
+  <defs>
+    <marker id="a15" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="a15o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#d97706"/>
+    </marker>
+  </defs>
+  <rect width="920" height="430" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 9-1 LoRA 低秩适配核心原理：冻结巨型基座 W₀，用“细腰旁路 B·A”精准微调</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">以 Qwen3-0.6B 的 q_proj (1024 → 2048, r=16, α=32) 为例：参数从 2,097,152 暴减至 49,152（仅 2.34%！）</text>
+
+  <!-- Input x -->
+  <rect x="44" y="182" width="118" height="62" rx="10" fill="#1e293b"/>
+  <text x="103" y="208" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" font-family="'PingFang SC',sans-serif">输入向量 x</text>
+  <text x="103" y="229" text-anchor="middle" font-size="11.5" fill="#93c5fd" font-family="'SF Mono',monospace">d_in = 1024</text>
+
+  <!-- Branch up to Frozen W0 -->
+  <path d="M 162 200 L 220 200 L 220 132 L 280 132" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#a15)"/>
+  <!-- Frozen W0 block -->
+  <rect x="284" y="84" width="330" height="96" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+  <text x="449" y="112" text-anchor="middle" font-size="14" font-weight="700" fill="#334155" font-family="'PingFang SC',sans-serif">
+    冻结原权重 W₀ (BF16 · requires_grad=False)
+  </text>
+  <text x="449" y="136" text-anchor="middle" font-size="12" fill="#475569" font-family="'SF Mono',monospace">
+    形状 (2048, 1024) = 2,097,152 参数
+  </text>
+  <text x="449" y="160" text-anchor="middle" font-size="11.5" fill="#64748b" font-family="'PingFang SC',sans-serif">
+    🔒 全程冰封：不存梯度、不存 AdamW 状态，保护预训练知识！
+  </text>
+
+  <!-- Branch down to LoRA A -> B -->
+  <path d="M 162 226 L 220 226 L 220 282 L 266 282" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a15o)"/>
+
+  <!-- LoRA A -->
+  <polygon points="270,228 386,258 386,306 270,336" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="322" y="276" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e" font-family="'SF Mono',sans-serif">A (降维)</text>
+  <text x="322" y="294" text-anchor="middle" font-size="10.5" fill="#b45309" font-family="'SF Mono',monospace">1024→16</text>
+  <text x="322" y="311" text-anchor="middle" font-size="10" fill="#78350f" font-family="'PingFang SC',sans-serif">随机初始化</text>
+
+  <!-- Bottleneck r=16 -->
+  <rect x="394" y="262" width="54" height="40" rx="6" fill="#f59e0b"/>
+  <text x="421" y="287" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="'SF Mono',monospace">r=16</text>
+
+  <!-- LoRA B -->
+  <polygon points="456,258 574,228 574,336 456,306" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+  <text x="520" y="276" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e" font-family="'SF Mono',sans-serif">B (升维)</text>
+  <text x="520" y="294" text-anchor="middle" font-size="10.5" fill="#b45309" font-family="'SF Mono',monospace">16→2048</text>
+  <text x="520" y="311" text-anchor="middle" font-size="10" font-weight="700" fill="#be123c" font-family="'PingFang SC',sans-serif">严格全 0 初始化!</text>
+
+  <!-- Scale alpha/r -->
+  <line x1="574" y1="282" x2="604" y2="282" stroke="#d97706" stroke-width="2.2" marker-end="url(#a15o)"/>
+  <rect x="608" y="258" width="84" height="48" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1.8"/>
+  <text x="650" y="279" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e" font-family="'SF Mono',monospace">× (α / r)</text>
+  <text x="650" y="297" text-anchor="middle" font-size="10.5" fill="#b45309" font-family="'SF Mono',monospace">32 / 16 = 2</text>
+
+  <!-- Sum circle -->
+  <path d="M 614 132 L 732 132 L 732 190" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#a15)"/>
+  <path d="M 692 282 L 732 282 L 732 232" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#a15o)"/>
+  <circle cx="732" cy="211" r="18" fill="#0d9488"/>
+  <text x="732" y="218" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">+</text>
+
+  <!-- Output y -->
+  <line x1="750" y1="211" x2="782" y2="211" stroke="#475569" stroke-width="2.2" marker-end="url(#a15)"/>
+  <rect x="786" y="176" width="110" height="70" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+  <text x="841" y="203" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">输出 h</text>
+  <text x="841" y="223" text-anchor="middle" font-size="11" fill="#047857" font-family="'SF Mono',monospace">d_out = 2048</text>
+  <text x="841" y="239" text-anchor="middle" font-size="10" fill="#059669" font-family="'PingFang SC',sans-serif">部署可无损合并!</text>
+
+  <!-- Bottom Insights -->
+  <rect x="34" y="354" width="852" height="60" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="52" y="378" font-size="12" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC',sans-serif">
+    两大灵魂设计：① 为什么 B=0 而 A≠0？因为第 0 步 ΔW = B·A = 0（保证开局 100% 等于原模型，不毁掉老本），同时 A≠0 使 ∂L/∂B ≠ 0 立刻可学！
+  </text>
+  <text x="52" y="400" font-size="12" font-weight="600" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">
+    ② 为什么推理零额外延迟？训完后直接算 W_merged = W₀ + (α/r)BA 写回原矩阵，推理速度和原模型一模一样！
+  </text>
+</svg>

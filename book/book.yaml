@@ -1,0 +1,24 @@
+title: "从零到一：大模型底层原理、GPU 算子优化与任意模型后训练实战"
+subtitle: "PyTorch 内核 · GPU 与 Roofline · 核心算子 · 显存精算 · 逐层解剖 · SFT/DPO/RL 全闭环"
+author: "Qwen3-ASR Post-Training Engineering Team"
+lang: "zh-CN"
+date: "2026-11-26"
+version: "v1.0-revised"
+output_basename: "从零到一大模型底层与后训练实战"
+cover_svg: "assets/cover.svg"
+cover_png: "assets/cover.png"
+chapters:
+  - chapters/00_preface.md
+  - chapters/01_math_and_neural_intuition.md
+  - chapters/02_pytorch_internals.md
+  - chapters/03_gpu_architecture_optimization.md
+  - chapters/04_operators_and_kernels.md
+  - chapters/05_vram_calculation_gpu_choice.md
+  - chapters/06_model_anatomy_overview.md
+  - chapters/07_audio_encoder_dissection.md
+  - chapters/08_decoder_and_generalization.md
+  - chapters/09_posttraining_lora_and_sft.md
+  - chapters/10_dpo_preference_alignment.md
+  - chapters/11_rl_grpo_and_evaluation_gym.md
+  - chapters/12_zero_to_one_any_model_playbook.md
+  - chapters/13_appendices.md

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" width="1200" height="1600">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1120"/>
+      <stop offset="55%" stop-color="#111c3a"/>
+      <stop offset="100%" stop-color="#0f2942"/>
+    </linearGradient>
+    <linearGradient id="accentBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#334155" stroke-width="0.7" stroke-opacity="0.35"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="1600" fill="url(#bgGrad)"/>
+  <rect width="1200" height="1600" fill="url(#grid)"/>
+
+  <!-- Decorative subtle glow circles -->
+  <circle cx="980" cy="260" r="320" fill="#38bdf8" fill-opacity="0.07"/>
+  <circle cx="200" cy="1320" r="340" fill="#818cf8" fill-opacity="0.07"/>
+
+  <!-- Top accent stripe -->
+  <rect x="0" y="0" width="1200" height="16" fill="url(#accentBar)"/>
+
+  <!-- Top series tag -->
+  <rect x="88" y="88" width="440" height="44" rx="22" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="308" y="117" text-anchor="middle" fill="#7dd3fc" font-size="20" font-weight="600"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">
+    面向普通开发者与零基础学习者的系统实战指南
+  </text>
+
+  <!-- Main Title -->
+  <text x="88" y="255" fill="#f8fafc" font-size="92" font-weight="800"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">从零到一</text>
+  <text x="88" y="365" fill="#38bdf8" font-size="64" font-weight="700"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">大模型底层原理、GPU 算子优化</text>
+  <text x="88" y="455" fill="#f59e0b" font-size="64" font-weight="700"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">与任意模型后训练实战</text>
+
+  <!-- Subtitle -->
+  <text x="88" y="535" fill="#cbd5e1" font-size="27" font-weight="400"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">
+    PyTorch 内存与自动求导 · GPU 硬件与 Roofline · FlashAttention 与 Triton 算子
+  </text>
+  <text x="88" y="578" fill="#cbd5e1" font-size="27" font-weight="400"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">
+    显存精算与选卡 · 7.82 亿参数逐层全解剖 · SFT → DPO → RL/GRPO 端到端闭环
+  </text>
+
+  <rect x="88" y="618" width="1024" height="4" rx="2" fill="url(#accentBar)"/>
+
+  <!-- Central Visual Architecture Diagram Card -->
+  <rect x="88" y="670" width="1024" height="635" rx="24" fill="url(#cardGrad)" stroke="#334155" stroke-width="2"/>
+  <text x="132" y="726" fill="#94a3b8" font-size="20" font-weight="600"
+        font-family="'SF Mono','Menlo',monospace">FULL-STACK POST-TRAINING ARCHITECTURE MAP</text>
+
+  <!-- Layer 1: Hardware & PyTorch -->
+  <rect x="132" y="756" width="936" height="104" rx="14" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+  <text x="164" y="798" fill="#38bdf8" font-size="24" font-weight="700"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 1 底座：PyTorch 内核 · GPU SM/Warp · 显存精算</text>
+  <text x="164" y="836" fill="#cbd5e1" font-size="19"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">Storage/Stride · Autograd · BF16/FP32 ULP · Roofline · VRAM 公式与 OOM 排错</text>
+
+  <!-- Arrow down -->
+  <path d="M 600 864 L 600 892" stroke="#64748b" stroke-width="3"/>
+  <polygon points="590,886 610,886 600,900" fill="#64748b"/>
+
+  <!-- Layer 2: Operators -->
+  <rect x="132" y="902" width="936" height="104" rx="14" fill="#0f172a" stroke="#818cf8" stroke-width="2"/>
+  <text x="164" y="944" fill="#a5b4fc" font-size="24" font-weight="700"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 2 引擎：核心算子全景与 GPU 融合优化</text>
+  <text x="164" y="982" fill="#cbd5e1" font-size="19"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">GEMM Tiling · FlashAttention Online Softmax · RMSNorm · SwiGLU · RoPE · Triton</text>
+
+  <path d="M 600 1010 L 600 1038" stroke="#64748b" stroke-width="3"/>
+  <polygon points="590,1032 610,1032 600,1046" fill="#64748b"/>
+
+  <!-- Layer 3: Model Anatomy -->
+  <rect x="132" y="1048" width="936" height="104" rx="14" fill="#0f172a" stroke="#14b8a6" stroke-width="2"/>
+  <text x="164" y="1090" fill="#5eead4" font-size="24" font-weight="700"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 3 解剖：Qwen3-ASR-0.6B（782,426,112 参数）逐层拆解</text>
+  <text x="164" y="1128" fill="#cbd5e1" font-size="17"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">Log-Mel → 3×Conv2d → 18L AuT → Projector → 28L Qwen3 (GQA/QK-Norm) + 任意模型通法</text>
+
+  <path d="M 600 1156 L 600 1184" stroke="#64748b" stroke-width="3"/>
+  <polygon points="590,1178 610,1178 600,1192" fill="#64748b"/>
+
+  <!-- Layer 4: Post-training -->
+  <rect x="132" y="1194" width="936" height="86" rx="14" fill="#1c1917" stroke="#f59e0b" stroke-width="2.5"/>
+  <text x="164" y="1234" fill="#fbbf24" font-size="24" font-weight="700"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">第 4 实战：LoRA → SFT → DPO → RL / GRPO → 统计门禁发布</text>
+  <text x="164" y="1266" fill="#fde68a" font-size="18"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">直通差异掩码 · k3 KL · Sim-to-Real 物理增强 · 配对簇 Bootstrap 检验 · 0-to-1 万能代码模板</text>
+
+  <!-- Footer badges -->
+  <rect x="88" y="1365" width="210" height="54" rx="10" fill="#1e293b" stroke="#475569"/>
+  <text x="193" y="1400" text-anchor="middle" fill="#e2e8f0" font-size="22" font-weight="600"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">18 张原创原理图</text>
+
+  <rect x="322" y="1365" width="230" height="54" rx="10" fill="#1e293b" stroke="#475569"/>
+  <text x="437" y="1400" text-anchor="middle" fill="#e2e8f0" font-size="22" font-weight="600"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">高中数学友好推导</text>
+
+  <rect x="576" y="1365" width="246" height="54" rx="10" fill="#1e293b" stroke="#475569"/>
+  <text x="699" y="1400" text-anchor="middle" fill="#e2e8f0" font-size="22" font-weight="600"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">真实工业踩坑复盘</text>
+
+  <rect x="846" y="1365" width="266" height="54" rx="10" fill="#1e293b" stroke="#475569"/>
+  <text x="979" y="1400" text-anchor="middle" fill="#e2e8f0" font-size="22" font-weight="600"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">HTML · PDF · EPUB</text>
+
+  <text x="88" y="1510" fill="#94a3b8" font-size="22"
+        font-family="'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif">
+    Qwen3-ASR Post-Training Engineering Project · 第一版（修订精校版）
+  </text>
+  <text x="1112" y="1510" text-anchor="end" fill="#64748b" font-size="20"
+        font-family="'SF Mono','Menlo',monospace">2026</text>
+</svg>

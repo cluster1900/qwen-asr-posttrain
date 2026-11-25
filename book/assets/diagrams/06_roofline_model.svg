@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 430" width="920" height="430">
+  <defs>
+    <marker id="ax" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="920" height="430" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 3-2 Roofline（屋顶线）性能模型：一眼判别算子是“卡带宽”还是“卡算力”</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">以 NVIDIA A100 80GB (BF16 峰值 312 TFLOPS, 显存带宽 2.0 TB/s, 拐点 156 FLOPs/Byte) 为例（对数坐标示意）</text>
+
+  <!-- Background regions -->
+  <rect x="96" y="78" width="434" height="270" fill="#fff1f2" fill-opacity="0.55"/>
+  <rect x="530" y="78" width="346" height="270" fill="#ecfdf5" fill-opacity="0.55"/>
+
+  <!-- Ridge vertical dashed line -->
+  <line x1="530" y1="78" x2="530" y2="348" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6,4"/>
+  <text x="530" y="366" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a" font-family="'SF Mono',monospace">拐点 156</text>
+
+  <!-- Region Titles -->
+  <text x="290" y="102" text-anchor="middle" font-size="13.5" font-weight="700" fill="#be123c" font-family="'PingFang SC',sans-serif">Memory-Bound（访存受限区）</text>
+  <text x="290" y="120" text-anchor="middle" font-size="11.5" fill="#9f1239" font-family="'PingFang SC',sans-serif">算得太快、搬得太慢 → 加速靠“算子融合 / 量化 / 减少读写”</text>
+
+  <text x="703" y="102" text-anchor="middle" font-size="13.5" font-weight="700" fill="#047857" font-family="'PingFang SC',sans-serif">Compute-Bound（算力受限区）</text>
+  <text x="703" y="120" text-anchor="middle" font-size="11.5" fill="#065f46" font-family="'PingFang SC',sans-serif">Tensor Core 吃满 → 加速靠“低精度 / 剪枝 / 换更强卡”</text>
+
+  <!-- Axes -->
+  <line x1="96" y1="348" x2="886" y2="348" stroke="#334155" stroke-width="2" marker-end="url(#ax)"/>
+  <line x1="96" y1="348" x2="96" y2="70" stroke="#334155" stroke-width="2" marker-end="url(#ax)"/>
+
+  <!-- Axis labels -->
+  <text x="490" y="396" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a" font-family="'PingFang SC',sans-serif">
+    算术强度 Arithmetic Intensity (FLOPs / Byte，对数刻度)
+  </text>
+  <text x="36" y="210" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a" transform="rotate(-90 36 210)" font-family="'PingFang SC',sans-serif">
+    实测吞吐性能 (TFLOPS，对数)
+  </text>
+
+  <!-- X ticks -->
+  <g font-family="'SF Mono',monospace" font-size="11" fill="#475569" text-anchor="middle">
+    <text x="145" y="365">0.25</text>
+    <text x="235" y="365">1</text>
+    <text x="330" y="365">8</text>
+    <text x="430" y="365">32</text>
+    <text x="650" y="365">512</text>
+    <text x="790" y="365">2048</text>
+  </g>
+  <!-- Y ticks -->
+  <g font-family="'SF Mono',monospace" font-size="11" fill="#475569" text-anchor="end">
+    <text x="88" y="328">1</text>
+    <text x="88" y="275">10</text>
+    <text x="88" y="215">50</text>
+    <text x="88" y="152">312</text>
+  </g>
+
+  <!-- Roofline curve -->
+  <polyline points="116,338 530,148 860,148" fill="none" stroke="#1d4ed8" stroke-width="4" stroke-linejoin="round"/>
+  <text x="255" y="246" font-size="12" font-weight="700" fill="#1d4ed8" transform="rotate(-24 255 246)" font-family="'PingFang SC',sans-serif">斜坡上限 = 带宽 × 算术强度</text>
+  <text x="705" y="140" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8" font-family="'PingFang SC',sans-serif">屋顶上限 = 312 TFLOPS (BF16)</text>
+
+  <!-- Operator dots -->
+  <!-- Elementwise / RMSNorm / Softmax -->
+  <circle cx="170" cy="316" r="7" fill="#e11d48" stroke="#fff" stroke-width="2"/>
+  <text x="184" y="320" font-size="11.5" font-weight="700" fill="#9f1239" font-family="'PingFang SC',sans-serif">ReLU / RMSNorm / Softmax</text>
+  <text x="184" y="335" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">(AI ≈ 0.5–2, 极度卡带宽)</text>
+
+  <!-- Decode GEMV (batch=1) -->
+  <circle cx="255" cy="276" r="7" fill="#d97706" stroke="#fff" stroke-width="2"/>
+  <text x="270" y="274" font-size="11.5" font-weight="700" fill="#92400e" font-family="'PingFang SC',sans-serif">推理 Decode (Batch=1 GEMV)</text>
+  <text x="270" y="289" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">(AI ≈ 1, 全靠显存带宽续命!)</text>
+
+  <!-- Standard Attention -->
+  <circle cx="372" cy="222" r="7" fill="#7c3aed" stroke="#fff" stroke-width="2"/>
+  <text x="386" y="226" font-size="11.5" font-weight="700" fill="#5b21b6" font-family="'PingFang SC',sans-serif">朴素 Attention</text>
+  <text x="386" y="241" font-size="10.5" fill="#64748b" font-family="'PingFang SC',sans-serif">(读写 N×N 矩阵拖垮带宽)</text>
+
+  <!-- FlashAttention -->
+  <circle cx="620" cy="170" r="8" fill="#0d9488" stroke="#fff" stroke-width="2"/>
+  <text x="634" y="174" font-size="11.5" font-weight="700" fill="#0f766e" font-family="'PingFang SC',sans-serif">FlashAttention-2 (融合提强度!)</text>
+  <path d="M 380 218 Q 495 182 609 171" fill="none" stroke="#0d9488" stroke-width="2" stroke-dasharray="5,3"/>
+
+  <!-- Large GEMM / Training Prefill -->
+  <circle cx="760" cy="154" r="8" fill="#059669" stroke="#fff" stroke-width="2"/>
+  <text x="760" y="198" text-anchor="middle" font-size="11.5" font-weight="700" fill="#065f46" font-family="'PingFang SC',sans-serif">大 Batch 训练 GEMM / Prefill</text>
+  <text x="760" y="213" text-anchor="middle" font-size="10.5" fill="#047857" font-family="'PingFang SC',sans-serif">(AI &gt; 500, 吃满 Tensor Core!)</text>
+
+  <!-- Bottom formula -->
+  <text x="460" y="418" text-anchor="middle" font-size="11.5" fill="#334155" font-family="'PingFang SC',sans-serif">
+    实测性能 ≤ min( 峰值算力 P_peak ,  显存带宽 BW × 算术强度 AI )，其中 AI = 总浮点运算量(FLOPs) ÷ 总显存读写量(Bytes)
+  </text>
+</svg>

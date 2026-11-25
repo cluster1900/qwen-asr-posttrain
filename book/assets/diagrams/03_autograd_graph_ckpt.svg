@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 450" width="920" height="450">
+  <defs>
+    <marker id="arB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48"/>
+    </marker>
+    <marker id="arG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0d9488"/>
+    </marker>
+  </defs>
+  <rect width="920" height="450" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">图 2-2 标准反向传播 vs Gradient Checkpointing（激活重计算）显存与时间权衡</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#64748b"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">前向不存全部中间激活，反向用到哪一层再临时重算——用约 +30% 计算时间，换取高达 60%–80% 激活显存节省</text>
+
+  <!-- Panel 1: Standard Backprop -->
+  <rect x="28" y="72" width="864" height="162" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="46" y="96" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    ① 标准训练（不开启 Checkpointing）：28 层全部中间激活常驻显存，峰值显存 O(L)
+  </text>
+
+  <!-- Forward nodes -->
+  <g font-family="'PingFang SC','SF Mono',sans-serif" font-size="12" text-anchor="middle">
+    <rect x="48" y="114" width="90" height="42" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.8"/>
+    <text x="93" y="139" font-weight="700" fill="#1e3a8a">输入 x₀</text>
+
+    <line x1="138" y1="135" x2="178" y2="135" stroke="#2563eb" stroke-width="2" marker-end="url(#arB)"/>
+    <rect x="182" y="114" width="110" height="42" rx="8" fill="#fee2e2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="237" y="132" font-weight="700" fill="#9f1239">Layer 1 激活</text>
+    <text x="237" y="148" font-size="10.5" fill="#be123c">常驻显存</text>
+
+    <line x1="292" y1="135" x2="332" y2="135" stroke="#2563eb" stroke-width="2" marker-end="url(#arB)"/>
+    <rect x="336" y="114" width="110" height="42" rx="8" fill="#fee2e2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="391" y="132" font-weight="700" fill="#9f1239">Layer 2 激活</text>
+    <text x="391" y="148" font-size="10.5" fill="#be123c">常驻显存</text>
+
+    <line x1="446" y1="135" x2="486" y2="135" stroke="#2563eb" stroke-width="2" marker-end="url(#arB)"/>
+    <rect x="490" y="114" width="110" height="42" rx="8" fill="#fee2e2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="545" y="132" font-weight="700" fill="#9f1239">… Layer 27</text>
+    <text x="545" y="148" font-size="10.5" fill="#be123c">常驻显存</text>
+
+    <line x1="600" y1="135" x2="640" y2="135" stroke="#2563eb" stroke-width="2" marker-end="url(#arB)"/>
+    <rect x="644" y="114" width="110" height="42" rx="8" fill="#fee2e2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="699" y="132" font-weight="700" fill="#9f1239">Layer 28 激活</text>
+    <text x="699" y="148" font-size="10.5" fill="#be123c">常驻显存</text>
+
+    <line x1="754" y1="135" x2="788" y2="135" stroke="#2563eb" stroke-width="2" marker-end="url(#arB)"/>
+    <rect x="792" y="114" width="82" height="42" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+    <text x="833" y="139" font-weight="700" fill="#92400e">Loss</text>
+  </g>
+  <!-- Backward arrows -->
+  <path d="M 833 156 L 833 196 L 93 196 L 93 160" fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arR)"/>
+  <text x="460" y="216" text-anchor="middle" font-size="12" font-weight="600" fill="#be123c" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    反向传播直接读取已存激活求导：快（1× 前向 + 1× 反向），但长序列极易 OOM！
+  </text>
+
+  <!-- Panel 2: Gradient Checkpointing -->
+  <rect x="28" y="250" width="864" height="184" rx="10" fill="#ffffff" stroke="#0d9488" stroke-width="1.8"/>
+  <text x="46" y="274" font-size="13.5" font-weight="700" fill="#0f766e" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    ② Gradient Checkpointing（use_reentrant=False）：仅保留每层边界输入，层内激活即算即扔！
+  </text>
+
+  <g font-family="'PingFang SC','SF Mono',sans-serif" font-size="12" text-anchor="middle">
+    <rect x="48" y="294" width="112" height="46" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+    <text x="104" y="314" font-weight="700" fill="#134e4a">Embedding 输出</text>
+    <text x="104" y="330" font-size="10" fill="#0f766e">requires_grad=True!</text>
+
+    <line x1="160" y1="317" x2="196" y2="317" stroke="#0d9488" stroke-width="2" marker-end="url(#arG)"/>
+    <rect x="200" y="294" width="126" height="46" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-dasharray="5,3" stroke-width="1.8"/>
+    <text x="263" y="314" font-weight="700" fill="#475569">Layer 1 内部激活</text>
+    <text x="263" y="330" font-size="10" fill="#64748b">前向后立即释放</text>
+
+    <line x1="326" y1="317" x2="362" y2="317" stroke="#0d9488" stroke-width="2" marker-end="url(#arG)"/>
+    <rect x="366" y="294" width="102" height="46" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+    <text x="417" y="314" font-weight="700" fill="#134e4a">边界检查点</text>
+    <text x="417" y="330" font-size="10" fill="#0f766e">仅存输入张量</text>
+
+    <line x1="468" y1="317" x2="504" y2="317" stroke="#0d9488" stroke-width="2" marker-end="url(#arG)"/>
+    <rect x="508" y="294" width="126" height="46" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-dasharray="5,3" stroke-width="1.8"/>
+    <text x="571" y="314" font-weight="700" fill="#475569">Layer 28 内部激活</text>
+    <text x="571" y="330" font-size="10" fill="#64748b">反向时临时重算</text>
+
+    <line x1="634" y1="317" x2="670" y2="317" stroke="#0d9488" stroke-width="2" marker-end="url(#arG)"/>
+    <rect x="674" y="294" width="84" height="46" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+    <text x="716" y="321" font-weight="700" fill="#92400e">Loss</text>
+  </g>
+
+  <!-- Recompute loop arrow -->
+  <path d="M 716 340 L 716 372 L 571 372 L 571 344" fill="none" stroke="#e11d48" stroke-width="2" marker-end="url(#arR)"/>
+  <text x="780" y="366" font-size="11" font-weight="600" fill="#be123c" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">反向到第 k 层时</text>
+  <text x="780" y="382" font-size="11" fill="#be123c" font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">局部重算→求导→释放</text>
+
+  <!-- Critical Hook note from train_sft.py -->
+  <rect x="44" y="384" width="832" height="44" rx="6" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="460" y="402" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    实战必踩大坑（见 train/train_sft.py）：LoRA 冻结了 Embedding，必须给 Embedding 注册 forward hook
+  </text>
+  <text x="460" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#b45309"
+        font-family="'PingFang SC','Noto Sans CJK SC',sans-serif">
+    强制执行 output.requires_grad_(True)，否则 Gradient Checkpointing 反向梯度会直接断链！
+  </text>
+</svg>
