@@ -249,11 +249,17 @@ def load_train_config(path: Path) -> dict[str, Any]:
         raise ValueError("runtime.tf32 must be false")
 
     lora = _mapping(raw.get("lora"), "lora")
-    _reject_unknown(lora, {"rank", "alpha", "dropout", "scope", "projections"}, "lora")
+    _reject_unknown(lora, {"rank", "alpha", "dropout", "scope", "projections", "trainable_dtype"}, "lora")
     if lora.get("scope") != "decoder_attention_only":
         raise ValueError("lora.scope must be decoder_attention_only")
     if lora.get("projections") != PROJECTIONS:
         raise ValueError("lora.projections must be [q_proj, k_proj, v_proj, o_proj]")
+    raw_trainable_dtype = lora.get("trainable_dtype")
+    trainable_dtype: str | None = None
+    if raw_trainable_dtype is not None:
+        trainable_dtype = _as_str(raw_trainable_dtype, "lora.trainable_dtype")
+        if trainable_dtype not in {"bfloat16", "float32"}:
+            raise ValueError(f"invalid lora.trainable_dtype: {trainable_dtype}")
 
     data = _mapping(raw.get("data"), "data")
     _reject_unknown(
@@ -485,6 +491,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
             "dropout": _as_float(lora.get("dropout"), "lora.dropout", minimum=0.0, maximum=1.0),
             "scope": "decoder_attention_only",
             "projections": list(PROJECTIONS),
+            **({"trainable_dtype": trainable_dtype} if trainable_dtype is not None else {}),
         },
         "data": {
             "train_manifest": _as_str(data.get("train_manifest"), "data.train_manifest"),

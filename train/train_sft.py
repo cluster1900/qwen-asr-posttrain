@@ -295,6 +295,10 @@ def apply_lora(model: Any, config: dict[str, Any]) -> dict[str, Any]:
         ),
         model,
     )
+    if config["lora"].get("trainable_dtype") == "float32":
+        for _name, param in model.named_parameters():
+            if param.requires_grad:
+                param.data = param.data.float()
     try:
         report = trainable_report(model)
     except ValueError as exc:
@@ -422,7 +426,7 @@ def save_adapter(model: Any, path: Path) -> str:
     return sha256_file(path)
 
 
-def load_adapter(model: Any, path: Path) -> None:
+def load_adapter(model: Any, path: Path, *, match_checkpoint_dtype: bool = False) -> None:
     from safetensors.torch import load_file
 
     tensors = load_file(str(path))
@@ -432,7 +436,10 @@ def load_adapter(model: Any, path: Path) -> None:
         raise RunStop("resume_rejected", "adapter parameter names do not match the current LoRA map", 2)
     for name, value in tensors.items():
         param = named[name]
-        param.data.copy_(value.to(device=param.device, dtype=param.dtype))
+        if match_checkpoint_dtype and param.dtype != value.dtype:
+            param.data = value.to(device=param.device, dtype=value.dtype)
+        else:
+            param.data.copy_(value.to(device=param.device, dtype=param.dtype))
 
 
 class HorizonScheduler:

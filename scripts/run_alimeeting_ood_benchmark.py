@@ -529,7 +529,7 @@ def run_alimeeting_ood_benchmark(
         if model_loader is None:
             model_loader = load_sft_model
         if adapter_loader is None:
-            adapter_loader = load_adapter
+            adapter_loader = lambda m, p: load_adapter(m, p, match_checkpoint_dtype=True)
         if decode_fn is None:
             decode_fn = decode_eval_rows
 

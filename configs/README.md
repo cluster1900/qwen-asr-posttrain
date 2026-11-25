@@ -99,6 +99,16 @@
 - `train/rl_track3b_lr1e6_kl010_e2_ga8.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 大批量低方差配置（`lr=1e-6`、`kl_beta=0.10`、`me=2`、`ga=8`、`anchor=0.05`、`max_steps=12`、每 4 步评测）。
 - `train/rl_track3b_lr1e6_kl010_e2_ga4_ffrv.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 远场+混响专精配置（`train_scenarios=[far_field, reverb]`、`lr=1e-6`、`kl_beta=0.10`、`me=2`、`ga=4`、`anchor=0.05`、`max_steps=15`、每 5 步评测）。
 - `train/rl_track3b_lr15e7_kl015_e2_ga4_a03.yaml`：Phase 6 Track 3B Stage 3 RL `scale` 均衡中点配置（`lr=1.5e-6`、`kl_beta=0.15`、`me=2`、`ga=4`、`anchor=0.03`、`max_steps=15`、每 5 步评测）。
+- `train/rl_track3b_w2_fp32_lr5e7_kl010_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` LoRA 温和配置（`trainable_dtype=float32`、`lr=5e-7`、`kl_beta=0.10`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr1e6_kl010_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` LoRA 核心配置（`trainable_dtype=float32`、`lr=1e-6`、`kl_beta=0.10`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr2e6_kl010_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` LoRA 强信号配置（`trainable_dtype=float32`、`lr=2e-6`、`kl_beta=0.10`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr3e6_kl010_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` LoRA 高学习率配置（`trainable_dtype=float32`、`lr=3e-6`、`kl_beta=0.10`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr5e6_kl010_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` LoRA 上界配置（`trainable_dtype=float32`、`lr=5e-6`、`kl_beta=0.10`、`anchor=0.01`、`me=2`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr2e6_kl005_a00_e10.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 纯 KL 约束无静音锚配置（`trainable_dtype=float32`、`lr=2e-6`、`kl_beta=0.05`、`anchor=0.0`、`me=2`、`ga=4`、`max_steps=30`、每 10 步评测）。
+- `train/rl_track3b_w2_fp32_lr1e6_kl002_a005_e10.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 轻 KL + 极轻静音锚配置（`trainable_dtype=float32`、`lr=1e-6`、`kl_beta=0.02`、`anchor=0.005`、`me=2`、`ga=4`、`max_steps=30`、每 10 步评测）。
+- `train/rl_track3b_w2_fp32_lr2e6_kl010_e1_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` 单字替换配置（`trainable_dtype=float32`、`lr=2e-6`、`kl_beta=0.10`、`me=1`、`anchor=0.01`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr2e6_kl010_ffrv_a01_e8.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` 远场+混响专精配置（`trainable_dtype=float32`、`train_scenarios=[far_field, reverb]`、`lr=2e-6`、`kl_beta=0.10`、`anchor=0.01`、`ga=4`、`max_steps=24`、每 8 步评测）。
+- `train/rl_track3b_w2_fp32_lr1e6_kl010_a02_ga8_e6.yaml`：Phase 6 Track 3B Stage 3 RL Wave 2 `float32` 大批量低方差配置（`trainable_dtype=float32`、`ga=8`、`lr=1e-6`、`kl_beta=0.10`、`anchor=0.02`、`me=2`、`max_steps=18`、每 6 步评测）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 

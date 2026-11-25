@@ -274,6 +274,23 @@ class Track3ScaleContractsTest(unittest.TestCase):
             parsed_smoke2["rl"]["allow_matched_punctuation"] = False
             self.assertNotEqual(semantic_rl_config_sha256(parsed_smoke2, msha), h_smoke)
 
+            # Verify optional lora.trainable_dtype changes hash only when set and rejects bad values.
+            smoke_fp32_raw = copy.deepcopy(smoke_raw)
+            smoke_fp32_raw["lora"]["trainable_dtype"] = "float32"
+            smoke_fp32_p = tdir / "rl_track3_smoke_fp32.yaml"
+            smoke_fp32_p.write_text(yaml.safe_dump(smoke_fp32_raw, sort_keys=False), encoding="utf-8")
+            parsed_fp32 = load_rl_config(smoke_fp32_p)
+            self.assertEqual(parsed_fp32["lora"]["trainable_dtype"], "float32")
+            self.assertNotEqual(semantic_rl_config_sha256(parsed_fp32, msha), h_smoke)
+            self.assertNotIn("trainable_dtype", rl_legacy["lora"])
+
+            bad_dt_raw = copy.deepcopy(smoke_raw)
+            bad_dt_raw["lora"]["trainable_dtype"] = "float16"
+            bad_dt_p = tdir / "rl_track3_bad_dt.yaml"
+            bad_dt_p.write_text(yaml.safe_dump(bad_dt_raw, sort_keys=False), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_rl_config(bad_dt_p)
+
 
 if __name__ == "__main__":
     unittest.main()

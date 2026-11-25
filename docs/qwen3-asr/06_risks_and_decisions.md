@@ -80,6 +80,7 @@
 | 恢复重复 step | global step 倒退或重复、日志尾部不一致 | 只从完整 checkpoint 恢复，按 step 截断事件 | `resume_rejected`，人工检查后重试 |
 | clean regression/健康度恶化 | clean CER、空/重复率超阈值 | 同一 val gate 与立即停止 | 回到上一通过 release |
 | 依赖或硬件漂移 | environment hash/GPU/dtype 不同 | 启动探针、锁定 requirements、记录环境 | 标记 `incomparable` 或新 baseline |
+| `bfloat16` LoRA 小学习率 ULP 下溢（2026-11-25 实测） | 长程 SFT+DPO 后 `lora_A` 中位幅值 `1.45e-2`（`bf16` ULP `1.22e-4`）、`lora_B` 中位 `2.14e-4`（`bf16` ULP `1.91e-6`），导致 RL `lr ∈ [5e-7, 2e-6]` 在 `bf16` 下 `99.7%` `lora_A` 与 `78%` `lora_B` 零更新且产生 28 层离散底噪（`KL≈0.00028`） | 新增可选 `lora.trainable_dtype: float32`（基模型仍为 `bfloat16`，仅 LoRA 主权重用 `float32` 多占 9 MB，100% 消除 ULP 下溢；缺省 `null` 保持历史配置与哈希零漂移），并调轻 `dropout_anchor_weight` 避免淹没 RL 策略梯度 | 回退至已发布 DPO 冠军 `dpo_06b_zh_20261125T005003_step000040` |
 
 ## 测试
 
