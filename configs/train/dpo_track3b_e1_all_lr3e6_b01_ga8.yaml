@@ -1,0 +1,144 @@
+# Phase 6 Track 3B Stage 2 Punctuation-Matched DPO scale (t3-w7: me=1 all margin=[-4,0] (676 tr/160 va) lr=3e-6 beta=0.1 ga=8 steps=75 eval=25 anchor=0.05).
+schema_version: qwen3-asr-train-v1
+stage: dpo
+profile: scale
+seed: 42
+model:
+  name: Qwen/Qwen3-ASR-0.6B
+  revision: 5eb144179a02acc5e5ba31e748d22b0cf3e303b0
+  processor_sha256: 1b94f6ef846ce0faa88927fd8104c27831c457a69f103e6ec62fa392d315856c
+  parent_release: sft_06b_zh_20261124T194600_step000240
+  parent_release_sha256: "5d6674f32a25df8753bdef37759999224f896d05d65c3439032ee764ec466b6d"
+runtime:
+  environment_lock_file: requirements.track3.lock
+  environment_lock_sha256: b4b5fc873108ea373787af85f2bd9ed0697bce0529a5d345b7a1761653b32432
+  dtype: bfloat16
+  world_size: 1
+  attention: sdpa
+  gradient_checkpointing: true
+  num_workers: 0
+  allow_dirty: true
+  tf32: false
+  deterministic_algorithms: true
+  max_runtime_minutes: 360
+  shutdown_margin_minutes: 10
+  min_free_gpu_fraction: 0.10
+  min_free_disk_gb: 10
+  min_free_ram_gb: 4
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.0
+  scope: decoder_attention_only
+  projections: [q_proj, k_proj, v_proj, o_proj]
+data:
+  train_manifest: results/phase6_track3_slr28_20261124/manifest/train.jsonl
+  val_manifest: results/phase6_track3_slr28_20261124/manifest/val.jsonl
+  manifest_metadata: results/phase6_track3_slr28_20261124/manifest/manifest.json
+  max_audio_seconds: 30
+  max_transcript_tokens: 512
+  max_input_tokens: 2048
+  overlength: reject
+  sampler: seeded_shuffle
+baseline:
+  metrics: configs/train/aishell_slr28_val_base_20261124.json
+batch:
+  micro_batch_size: 1
+  gradient_accumulation_steps: 8
+  eval_batch_size: 1
+optim:
+  name: adamw
+  learning_rate: 0.000003
+  betas: [0.9, 0.95]
+  eps: 0.000001
+  weight_decay: 0.0
+  max_grad_norm: 1.0
+  scheduler: cosine
+  warmup_steps: 8
+  min_lr_ratio: 0.1
+train:
+  max_steps: 75
+  max_epochs: 1
+  log_steps: 1
+  save_steps: 25
+  eval_steps: 25
+  keep_last: 6
+  interrupt_after_step: null
+scoring:
+  normalization: zh-cer-v1
+  wer_tokenizer: jieba
+  wer_tokenizer_version: 0.42.1
+  wer_dictionary_sha256: 7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8
+  wer_hmm: false
+  empty_penalty: 0.5
+  repeated_penalty: 0.5
+  reward_clip: [-1.0, 1.0]
+decode:
+  eval:
+    do_sample: false
+    num_beams: 1
+    max_new_tokens: 513
+    repetition_penalty: 1.0
+    no_repeat_ngram_size: 0
+    context: ""
+    language: zh
+    eos_policy: tokenizer_eos_only
+  rollout:
+    group_size: 4
+    greedy_candidates: 1
+    temperature: 1.0
+    top_p: 0.95
+    top_k: 50
+    max_new_tokens: 513
+    seed_strategy: sha256_seed_epoch_visit_sample_candidate
+    context: ""
+    language: zh
+    eos_policy: tokenizer_eos_only
+gate:
+  min_rows_per_scenario: 50
+  clean_cer_increase_max: 0.01
+  clean_cer_increase_vs_base_max: 0.02
+  degraded_macro_increase_max: 0.0
+  scenario_cer_increase_max: 0.01
+  min_improved_degraded_scenarios: 1
+  empty_rate_max: 0.01
+  repeated_rate_max: 0.01
+  long_rate_max: 0.01
+  truncation_rate_max: 0.01
+  valid_output_rate_min: 0.99
+  min_preference_accuracy: 0.55
+  min_val_pairs: 100
+  min_reward_improvement: 0.002
+  raw_kl_max: 0.001
+  reward_drop_stop: 0.01
+dpo:
+  beta: 0.1
+  pair_train_manifest: results/phase6_track3_slr28_20261124/dpo_w1_s240/pairs_logprob/train_pairs.jsonl
+  pair_val_manifest: results/phase6_track3_slr28_20261124/dpo_w1_s240/pairs_logprob/val_pairs.jsonl
+  reference_cache: results/phase6_track3_slr28_20261124/dpo_w1_s240/pairs_logprob/ref_logprobs.jsonl
+  reference_report: results/phase6_track3_slr28_20261124/dpo_w1_s240/pairs_logprob/ref_report.json
+  pair_metadata: results/phase6_track3_slr28_20261124/dpo_w1_s240/pairs_null/pair_metadata.json
+  parent_metrics: configs/train/aishell_slr28_val_sft_w1s240_20261124.json
+  listen_waiver: user_20261017_skip_listen
+  audit_disposition: unlistened
+  min_train_pairs: 100
+  min_pairs_per_scenario: 10
+  logp_reduction: sequence_sum
+  train_scenarios: [noise, reverb, far_field]
+  val_scenarios: [clean, noise, reverb, far_field]
+  aligned_substitution_only: true
+  allow_matched_punctuation: true
+  exclude_clean_identical_rejected: false
+  max_edit_count: 1
+  loss_token_scope: mismatched_only
+  dropout_anchor_weight: 0.05
+  dropout_anchor_target: rejected_text
+  ref_margin_min: -4.0
+  ref_margin_max: 0.0
+  null_train_pairs_sha256: e6485b716ff0d708ed3e5386898e09737879d81fb3a9182cc8481ec0a150a69e
+  null_val_pairs_sha256: 6bc955cc56481af1367c20c3d62de4a3040a9b7f4ce0ab98a9c5b4669770d9f6
+  filled_train_pairs_sha256: e9b65b03e20bfcaacd65a576dc4eb931b1204a07913dcc68638ca009ceed12fa
+  filled_val_pairs_sha256: f950a0573e12ab70987566bf3c5a6152fca9a3e3bba85b6db1748994d4a4dce0
+  reference_cache_sha256: c572e79b3a6d01041a845dc7c5c08136ce4a55b1f7e34677c7560d7918cf1420
+  reference_report_sha256: 9bba2951fe7e6ccb59dec1e6b0a3ed1eca28993d821a8e0d75952b3b3735f64b
+rl: null

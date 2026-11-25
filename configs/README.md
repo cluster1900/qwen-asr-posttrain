@@ -67,6 +67,18 @@
 - `train/sft_track3b_punct_phys_lr1e5_ga32_160.yaml`：Phase 6 Track 3B 低学习率下界 160 步余弦收官配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=1.0e-5`、`ga=32`、`max_steps=160` 覆盖 5,120 条退化样本、每 80 步全量 val 门禁）。
 - `train/sft_track3b_punct_phys_lr2e5_ga32_160.yaml`：Phase 6 Track 3B 冠军区 160 步余弦退火收官配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=2.0e-5`、`ga=32`、`max_steps=160` 覆盖 5,120 条退化样本、每 80 步全量 val 门禁）。
 - `train/sft_track3b_punct_phys_lr25e6_ga32_160.yaml`：Phase 6 Track 3B 冠军区 160 步余弦中点配置（纯物理退化三场景 `[noise, reverb, far_field]`、`rank=16`/`alpha=32`、`lr=2.5e-5`、`ga=32`、`max_steps=160` 覆盖 5,120 条退化样本、每 80 步全量 val 门禁）。
+- `train/aishell_slr28_val_sft_w1s240_20261124.json`：Phase 6 Track 3B Stage 1 最终冠军不可变 SFT release（`sft_06b_zh_20261124T194600_step000240`、`phys r=16 lr=1.5e-5 ga=32 Step 240`，2,500 行 readback `mismatch_count=0`，`micro_cer=6.090%`/`micro_wer=9.644%`、`-117` 字错误、`-58` 物理退化、`P_CER(phys3)=99.65%`）在 `aishell1_slr28` `val.jsonl` 上的固定父指标基线，供 Stage 2 Track 3B DPO 门禁引用。
+- `train/dpo_track3b_smoke.yaml`：Phase 6 Track 3B Stage 2 标点匹配 DPO 6-step 中断恢复 smoke 配置（`profile: smoke`、`interrupt_after_step: 5`、`save_steps: 5`、`eval_steps: 6`、`max_steps: 6`，使用 10 条 `smoke_manifest/val.jsonl`，父 release 为 `sft_06b_zh_20261124T194600_step000240`，不可发布）。
+- `train/dpo_track3b_e1_excl_lr5e6_b01_ga4.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 主配置（`me=1`、去 clean 同音拷贝、`margin=[-4,0]`、`243` train / `160` val、`lr=5e-6`、`beta=0.1`、`ga=4`、`max_steps=60`、每 20 步全量 val 门禁、`dropout_anchor_weight=0.05`）。
+- `train/dpo_track3b_e1_excl_lr2e6_b01_ga4.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 低学习率配置（`me=1`、去 clean 同音、`margin=[-4,0]`、`lr=2e-6`、`beta=0.1`、`ga=4`、`max_steps=60`、每 20 步评测）。
+- `train/dpo_track3b_e1_excl_lr1e5_b01_ga4.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 高学习率配置（`me=1`、去 clean 同音、`margin=[-4,0]`、`lr=1e-5`、`beta=0.1`、`ga=4`、`max_steps=60`、每 20 步评测）。
+- `train/dpo_track3b_e1_excl_lr5e6_b02_ga4.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 高 `beta=0.2` 正则配置（`me=1`、去 clean 同音、`margin=[-4,0]`、`lr=5e-6`、`beta=0.2`、`ga=4`、`max_steps=60`、每 20 步评测）。
+- `train/dpo_track3b_e2_excl_lr5e6_b01_ga8.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 双字替换主配置（`me=2`、去 clean 同音、`margin=[-4,0]`、`388` train / `160` val、`lr=5e-6`、`beta=0.1`、`ga=8`、`max_steps=48`、每 16 步评测）。
+- `train/dpo_track3b_e2_excl_lr2e6_b01_ga8.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 双字替换低学习率配置（`me=2`、去 clean 同音、`margin=[-4,0]`、`lr=2e-6`、`beta=0.1`、`ga=8`、`max_steps=48`、每 16 步评测）。
+- `train/dpo_track3b_e2_excl_m8_lr5e6_b005_ga8.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 宽 margin + 低 beta 配置（`me=2`、去 clean 同音、`margin=[-8,0]`、`476` train / `242` val、`lr=5e-6`、`beta=0.05`、`ga=8`、`max_steps=54`、每 18 步评测、`dropout_anchor_weight=0.02`）。
+- `train/dpo_track3b_e1_all_lr3e6_b01_ga8.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 单字全覆盖配置（`me=1`、保留全部退化对 `exclude_clean_identical_rejected=false`、`margin=[-4,0]`、`676` train / `160` val、`lr=3e-6`、`beta=0.1`、`ga=8`、`max_steps=75`、每 25 步评测）。
+- `train/dpo_track3b_e2_all_lr3e6_b01_ga16.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 双字全覆盖大批量配置（`me=2`、`exclude_clean_identical_rejected=false`、`margin=[-4,0]`、`920` train / `160` val、`lr=3e-6`、`beta=0.1`、`ga=16`、`max_steps=54`、每 18 步评测）。
+- `train/dpo_track3b_e2_excl_lr1e6_b01_ga4.yaml`：Phase 6 Track 3B Stage 2 DPO `scale` 超温和长步数配置（`me=2`、去 clean 同音、`margin=[-4,0]`、`388` train / `160` val、`lr=1e-6`、`beta=0.1`、`ga=4`、`max_steps=90`、每 30 步评测）。
 
 训练字段以 [`docs/qwen3-asr/04_training_plan.md`](../docs/qwen3-asr/04_training_plan.md) 为准。数据字段以 [`docs/qwen3-asr/03_data_plan.md`](../docs/qwen3-asr/03_data_plan.md) 为准。
 

@@ -855,6 +855,23 @@ chosen 固定是 manifest 的原文，`chosen_cer` 为 0。rejected 是 `predict
 
 影响：完全兼容既有 Phase 0–5 与 Phase 6 Track 1/2 全部配置、哈希和单测，为 Track 3 物理增强多 A100 全速闭环提供统一训练与发布基础设施。
 
+## Phase 6 Track 3B Stage 2：标点匹配 DPO 10 路并发 `scale` 训练方案（2026-11-25）
+
+背景：Stage 1 标点保持 SFT 冠军 release `sft_06b_zh_20261124T194600_step000240`（`adapter_sha256=5d6674f32a25df8753bdef37759999224f896d05d65c3439032ee764ec466b6d`）已在 2500 条 SLR28 `val` 上取得 `-117` 字编辑（`micro_cer=6.0896%`）、`physical_degraded_3` `-58` 字编辑（$P_{\text{CER}}=99.65\%$）及 100% 中文标点保持，但在 `far_field`（`-7` 字编辑，`4.6832%` CER）仍存显著声学同音替换优化空间。离线标点匹配 DPO 偏好对与参考打分已全部完成并验签（`train_pairs=6982`、`val_pairs=983`、`rechecked=40`、`max_abs=0.0`），过滤后纯声学替换对中 `far_field` 为最大子切片（`100–321` 对），正好瞄准真实远场误差。
+
+范围：新增 Stage 1 父指标固化文件 `configs/train/aishell_slr28_val_sft_w1s240_20261124.json`、6-step 中断恢复 smoke 配置 `configs/train/dpo_track3b_smoke.yaml` 以及 10 份正交 Track 3B DPO `scale` 配置 `configs/train/dpo_track3b_*.yaml`；不修改任何历史 Phase 1–5 / Track 2 配置与冻结产物。
+
+设计：
+1. **统一冻结父版本与标点匹配对齐约束**：全部配置共享 `stage: dpo`、`lora.rank: 16`、`lora.alpha: 32`、`lora.dropout: 0.0`、`parent_release: sft_06b_zh_20261124T194600_step000240`、`train_scenarios: [noise, reverb, far_field]`、`val_scenarios: [clean, noise, reverb, far_field]`、`aligned_substitution_only: true`、`allow_matched_punctuation: true`、`loss_token_scope: mismatched_only`、`dropout_anchor_target: rejected_text`、`weight_decay: 0.0`、`eps: 1e-6`，并完整锁定 6 个 null/filled/cache/report SHA-256。
+2. **独立 6-step 中断恢复 Smoke 合同（`dpo_track3b_smoke.yaml`）**：`profile: smoke` 下显式设置 `interrupt_after_step: 5`、`save_steps: 5`、`eval_steps: 6`、`max_steps: 6`（使用 `smoke_manifest/val.jsonl` 10 条子集），在 `t3-w0` 上按「Step 1–5 保存中断 → 同 run_id `--resume` 续训至 Step 6 完赛并归档 Drive」验证 Track 3B DPO checkpoint 保存、哈希校验、cursor 匹配与恢复续训闭环，随后立即衔接 10 路全速 `profile: scale` 训练。
+3. **10 路正交超参覆盖**：覆盖 `max_edit_count ∈ {1, 2}`、`exclude_clean_identical_rejected ∈ {true, false}`、`ref_margin_min ∈ {-4.0, -8.0}`（对应 `243 / 388 / 476 / 676 / 920` 条训练对与 `160 / 242` 条验证对）、`learning_rate ∈ {1e-6, 2e-6, 3e-6, 5e-6, 1e-5}`、`beta ∈ {0.05, 0.1, 0.2}`、`gradient_accumulation_steps ∈ {4, 8, 16}` 及 `dropout_anchor_weight ∈ {0.02, 0.05}`，每组严格对准单 epoch 整数步并设 3 个等距 `eval_steps`，避免 epoch 尾步越界。
+
+测试：运行 `.venv/bin/python -m unittest tests.test_directory_readmes tests.test_track3_scale_contracts tests.test_dpo_contract -v` 并逐一调用 `train.dpo_schema.load_dpo_config` 校验全部 10 份配置；A100 上验证 `DPO_STEP0 max_abs=0`、`DPO_INTERRUPT step=5` + `DPO_RESUME global_step=5` 及全量 2500 条 `val` 门禁。
+
+验收：至少 1 组 Track 3B DPO `scale` 候选同时满足：（1）官方 `DPO_GATE` 全部通过（`passed=true`、`preference_accuracy >= 0.55`、`degraded_macro_delta <= 0.0`、`improved_degraded_scenarios >= 1`、`clean` 及健康度达标）；（2）`evaluation/math_expectation.py` 相对 Base 与相对 SFT 父版本均展现正向改善（优先 `physical_degraded_3` 与 `far_field` 编辑数下降、95% CI 稳健且保持 100% 标点）；（3）通过 `train/dpo_release.py` 独立新进程 2500 条 `val` 读回（`matched=true, mismatch_count=0`）并全量归档至 `MyDrive/qwen3-asr/releases/dpo/` 与 `MyDrive/qwen3-asr/runs/`。
+
+影响：为 Stage 3 Track 3B RL 锁定高信号、零标点漂移的不可变 DPO 父 release，不影响历史 Phase 3 DPO release 与测试。
+
 ## 影响与未验证项
 
 此次修正将 DPO 序列归约、阶段 adapter 衔接、RL 混合采样的偏差、KL 门禁测量、累积退化门禁和恢复状态变成明确合同。新实现需按这些合同构建，不能直接沿用旧历史结果。A100 容量、依赖组合、最佳超参数、数据规模、KL/健康度阈值适用性及 CER 改善仍需真实 smoke/pilot；当前没有效果证据，更不能宣称达到或超过 Mega-ASR。
