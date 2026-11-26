@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from train.dpo_v2 import DEFAULT_VAL_COHORT, uses_v2_gate
 
 from train.sft_schema import (
     SCENARIOS,
@@ -59,6 +60,9 @@ DPO_FIELDS = {
     "dropout_anchor_weight",
     "dropout_anchor_target",
     "dropout_anchor_samples_per_step",
+    "val_cohort",
+    "val_cohort_sha256",
+    "train_pair_limit",
 }
 PILOT_RELEASE_ID = "sft_06b_zh_20261015T234939_step000030"
 NON_DROPOUT_SCENARIOS = ["clean", "noise", "reverb", "far_field"]
@@ -144,7 +148,7 @@ def _parse_launch_fields(raw: dict[str, Any]) -> dict[str, Any]:
     source_val = _optional_sha(raw, "source_null_val_pairs_sha256")
     metadata_sha = _optional_sha(raw, "pair_metadata_sha256")
     extras = (source_train, source_val, metadata_sha)
-    if launch is None and any(item is not None for item in extras):
+    if launch is None and any(item is not None for item in (source_train, source_val)):
         raise ValueError("source pair hashes require dpo.launch_utterance")
     if launch is not None and any(item is None for item in extras):
         raise ValueError("gap-strip launch requires source pair hashes and pair_metadata_sha256")
@@ -482,6 +486,19 @@ def load_dpo_config(path: Path) -> dict[str, Any]:
     resolved["model"]["parent_release"] = parent_release
     resolved["model"]["parent_release_sha256"] = parent_sha
     resolved["dpo"] = parsed_dpo
+    if uses_v2_gate(resolved["gate"]):
+        cohort = _resolve_existing(str(dpo_raw.get("val_cohort", DEFAULT_VAL_COHORT)), path)
+        parsed_dpo["val_cohort"] = str(cohort.resolve())
+        parsed_dpo["val_cohort_sha256"] = sha256_file(cohort)
+        pinned = _optional_sha(dpo_raw, "val_cohort_sha256")
+        if pinned is not None and pinned != parsed_dpo["val_cohort_sha256"]:
+            raise ValueError("fixed DPO val cohort hash differs from the recipe")
+        if "train_pair_limit" in dpo_raw:
+            parsed_dpo["train_pair_limit"] = _as_int(dpo_raw["train_pair_limit"], "dpo.train_pair_limit", minimum=1)
+    elif any(key in dpo_raw for key in ("val_cohort", "val_cohort_sha256", "train_pair_limit")):
+        raise ValueError("dpo.val_cohort and train_pair_limit require a v2 gate")
+    elif parsed_dpo["pair_metadata_sha256"] and not parsed_dpo["launch_utterance"]:
+        raise ValueError("standalone pair_metadata_sha256 requires a v2 gate")
     resolved["yaml_sha256"] = sha256_file(path)
     _check_pilot_budget(resolved)
     _check_scale_budget(resolved)
@@ -545,6 +562,7 @@ def semantic_dpo_config_sha256(resolved: dict[str, Any], manifest_sha256: dict[s
             "parent_release_id": parent["release_id"],
             "parent_source_step": parent["source_step"],
             "parent_by_scenario": parent["by_scenario"],
+            **{k: dpo[k] for k in ("val_cohort_sha256", "train_pair_limit") if k in dpo},
             **(
                 {
                     "aligned_substitution_only": bool(dpo.get("aligned_substitution_only", False)),

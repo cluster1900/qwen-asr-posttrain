@@ -23,7 +23,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from train.dpo_contract import resume_gate_action  # noqa: E402
 from train.dpo_schema import load_dpo_config, semantic_dpo_config_sha256  # noqa: E402
+from train.dpo_v2 import PHYSICAL, preference_evidence, uses_v2_gate  # noqa: E402
 from train.sft_checkpoint import (  # noqa: E402
     atomic_write_json,
     directory_sha256,
@@ -38,6 +40,7 @@ from train.sft_release import (  # noqa: E402
     decision_for_step,
     fresh_fields,
     greedy_fields,
+    load_release as load_sft_release,
     read_jsonl,
 )
 
@@ -52,6 +55,7 @@ DPO_PAYLOAD_FILES = (
     "source/scored.jsonl",
     "source/training_state.json",
 )
+PHYSICAL_EVIDENCE = "source/physical_validation.json"
 
 
 def _run_stamp(run_dir: Path) -> str:
@@ -66,7 +70,7 @@ def require_passed_dpo_decision(decision: dict[str, Any], step: int, min_pref: f
     if decision.get("passed") is not True or decision.get("risk_stop") is not False:
         raise ValueError(f"step {step} is not a passed DPO checkpoint")
     pref = float(decision.get("preference_accuracy", 0.0))
-    if pref < min_pref or pref <= 0.5:
+    if not min_pref <= pref <= 1.0 or pref <= 0.5:
         raise ValueError(f"step {step} preference_accuracy {pref} is below the DPO gate")
 
 
@@ -102,7 +106,10 @@ def compare_dpo_greedy_texts(
 
 
 def _payload_record(root: Path) -> dict[str, Any]:
-    mapping = file_map(root, list(DPO_PAYLOAD_FILES))
+    files = list(DPO_PAYLOAD_FILES)
+    if (root / PHYSICAL_EVIDENCE).is_file():
+        files.append(PHYSICAL_EVIDENCE)
+    mapping = file_map(root, files)
     return {
         "schema_version": DPO_RELEASE_SHA_SCHEMA,
         "files": mapping,
@@ -141,6 +148,81 @@ def sync_release_dir(release_dir: Path, sync_dir: Path | None) -> str:
     return "synced"
 
 
+def _scored_references(rows: list[dict]) -> dict:
+    refs = {row["sample_id"]: (row["source_utterance_id"], row["scenario"], row["reference_normalized"],
+                               row["reference_char_count"]) for row in rows}
+    if len(refs) != len(rows):
+        raise ValueError("duplicate validation sample in scored rows")
+    return refs
+
+
+def physical_release_evidence(parent_rows: list[dict], candidate_rows: list[dict], seed: int) -> dict:
+    from evaluation.math_expectation import evaluate_math_expectation
+
+    if _scored_references(candidate_rows) != _scored_references(parent_rows):
+        raise ValueError("candidate and SFT release must score identical val examples and references")
+    report = evaluate_math_expectation(parent_rows, parent_rows, candidate_rows, target_slice="physical_degraded_3",
+                                       seed=seed, require_ci95_negative=True)
+    physical = report["slices"]["physical_degraded_3"]
+    upper = physical["cer_delta_ci95"][1]
+    if physical["edit_delta"] > -20 or not upper < 0:
+        raise ValueError(f"physical release gate failed: edit_delta={physical['edit_delta']}, CI95 upper={upper}")
+    return {"target": "physical_degraded_3", "minimum_edit_reduction": 20, "seed": seed,
+            "resamples": report["resamples"], "clusters": report["clusters"], "physical": physical}
+
+
+def _v2_release_evidence(
+    run_dir: Path, parent_release_dir: Path, config: dict, state: dict, decision: dict,
+    preference: dict, candidate_rows: list[dict],
+) -> dict:
+    """Verify both baselines and recompute the held-out preference and physical CER results."""
+    manifest_sha = state["manifest_sha256"]
+    zero_dir = run_dir / "eval" / step_name(0)
+    zero_hashes = file_map(zero_dir, ["preference.json", "metrics.json", "scored.jsonl"])
+    if state.get("step0_sha256") != zero_hashes:
+        raise ValueError("step-0 evaluation differs from the selected checkpoint")
+    zero_pref = json.loads((zero_dir / "preference.json").read_text(encoding="utf-8"))
+    if zero_pref.get("step") != 0:
+        raise ValueError("expected step-0 preference evidence")
+    cohort_sha = config["dpo"]["val_cohort_sha256"]
+    cohort = json.loads(Path(config["dpo"]["val_cohort"]).read_text(encoding="utf-8"))
+    preference_report = preference_evidence(zero_pref, preference, cohort, cohort_sha)
+    primary = preference_report["primary"]
+    if (primary["accuracy"] != decision["preference_accuracy"] or primary["ties"] != decision["preference_ties"]
+            or primary["raw_policy_accuracy"] != decision["raw_policy_accuracy"]):
+        raise ValueError("selected v2 decision differs from the primary preference measurement")
+    parent = load_sft_release(parent_release_dir)
+    if (parent.get("status") != "published" or parent.get("publishable") is not True
+            or parent["release_id"] != config["model"]["parent_release"]
+            or parent["adapter_sha256"] != state["parent_release_sha256"]
+            or parent["val_manifest_sha256"] != manifest_sha["val"]
+            or manifest_sha["val"] != config["baseline"]["manifest_sha256"]
+            or parent["eval_decode_sha256"] != state["eval_decode_sha256"]):
+        raise ValueError("v2 release requires the matching published SFT, val manifest and decoder")
+    reference_path = parent_release_dir / "source" / "scored.jsonl"
+    parent_rows = read_jsonl(reference_path)
+    if len(parent_rows) != config["dpo"]["parent"]["samples"] or sha256_file(reference_path) != parent["scored_sha256"]:
+        raise ValueError("SFT scored rows do not match the pinned parent")
+    readback_path = parent_release_dir / "readback.json"
+    if not readback_path.is_file() or sha256_file(readback_path) != parent.get("readback_sha256"):
+        raise ValueError("published SFT readback is missing or changed")
+    readback = json.loads(readback_path.read_text(encoding="utf-8"))
+    if (readback.get("matched") is not True or readback.get("mismatch_count") != 0
+            or readback.get("release_id") != parent["release_id"] or readback.get("compared") != len(parent_rows)):
+        raise ValueError("published SFT readback does not cover the full val set")
+    evidence = physical_release_evidence(parent_rows, candidate_rows, config["seed"])
+    zero_rows = read_jsonl(zero_dir / "scored.jsonl")
+    if _scored_references(zero_rows) != _scored_references(candidate_rows):
+        raise ValueError("step-0 and candidate val examples or references differ")
+    edit_delta = sum(r["edit_count"] for r in candidate_rows if r["scenario"] in PHYSICAL) - sum(
+        r["edit_count"] for r in zero_rows if r["scenario"] in PHYSICAL
+    )
+    evidence.update(parent_scored_sha256=parent["scored_sha256"], candidate_scored_sha256=decision["scored_sha256"],
+                    val_manifest_sha256=manifest_sha["val"], val_cohort_sha256=cohort_sha,
+                    step0_sha256=zero_hashes, preference=preference_report, physical_edit_delta_vs_step0=edit_delta)
+    return evidence
+
+
 def prepare_dpo_release(
     *,
     config_path: Path,
@@ -148,6 +230,7 @@ def prepare_dpo_release(
     output_dir: Path,
     release_id: str,
     sync_dir: Path | None = None,
+    parent_release_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Copy the selected DPO adapter. Refuse a second write or a failed gate."""
     if output_dir.exists():
@@ -168,6 +251,8 @@ def prepare_dpo_release(
         raise ValueError(f"release id does not match the selected step: {release_id} != {expected_id}")
     min_pref = float(config["gate"]["min_preference_accuracy"])
     decisions = read_jsonl(run_dir / "eval_decisions.jsonl")
+    if any(d["step"] < selected and d["risk_stop"] for d in decisions):
+        raise ValueError("selected DPO step comes after a recorded hard stop")
     decision = decision_for_step(decisions, selected)
     require_passed_dpo_decision(decision, selected, min_pref)
     embedded = gate.get("decisions")
@@ -189,7 +274,8 @@ def prepare_dpo_release(
     if semantic_dpo_config_sha256(config, manifest_sha) != state.get("config_sha256"):
         raise ValueError("semantic DPO config hash does not match the checkpoint")
     scored_path = run_dir / "eval" / step_name(selected) / "scored.jsonl"
-    greedy_fields(read_jsonl(scored_path), "scored.jsonl")
+    candidate_rows = read_jsonl(scored_path)
+    greedy_fields(candidate_rows, "scored.jsonl")
     pref_path = run_dir / "eval" / step_name(selected) / "preference.json"
     if pref_path.is_file():
         preference = json.loads(pref_path.read_text(encoding="utf-8"))
@@ -207,8 +293,20 @@ def prepare_dpo_release(
         pref_acc = float(preference["accuracy"])
     else:
         raise ValueError(f"missing preference.json for step {selected}")
-    if pref_acc < min_pref or pref_acc <= 0.5:
+    if not min_pref <= pref_acc <= 1.0 or pref_acc <= 0.5:
         raise ValueError(f"preference.json accuracy {pref_acc} is below the DPO gate")
+    evidence = None
+    if uses_v2_gate(config["gate"]):
+        if parent_release_dir is None or not pref_path.is_file():
+            raise ValueError("v2 release requires --parent-release-dir and the saved preference.json")
+        resume_gate_action([row for row in decisions if row["step"] <= selected], selected,
+                           config["train"]["save_steps"], config["train"]["eval_steps"], selected)
+        if (decision_for_step(embedded or [], selected) != decision or preference.get("step") != selected
+                or decision.get("preference_sha256") != sha256_file(pref_path)
+                or decision.get("scored_sha256") != sha256_file(scored_path)
+                or decision.get("adapter_sha256") != sha256_file(checkpoint / "adapter" / "adapter.safetensors")):
+            raise ValueError("selected v2 decision does not match the saved checkpoint and evaluation")
+        evidence = _v2_release_evidence(run_dir, parent_release_dir, config, state, decision, preference, candidate_rows)
     latest_step = None
     latest_path = run_dir / "latest.json"
     if latest_path.is_file():
@@ -229,6 +327,8 @@ def prepare_dpo_release(
             atomic_write_json(staging / "source" / "preference.json", preference)
         shutil.copyfile(scored_path, staging / "source" / "scored.jsonl")
         shutil.copyfile(checkpoint / "training_state.json", staging / "source" / "training_state.json")
+        if evidence is not None:
+            atomic_write_json(staging / PHYSICAL_EVIDENCE, evidence)
         payload = _write_payload_sha(staging)
         release = {
             "schema_version": DPO_RELEASE_SCHEMA,
@@ -257,6 +357,7 @@ def prepare_dpo_release(
             "preference_sha256": payload["files"]["source/preference.json"],
             "gate_sha256": payload["files"]["source/gate.json"],
             "payload_sha256": payload["directory_sha256"],
+            **({"physical_validation_sha256": payload["files"][PHYSICAL_EVIDENCE]} if evidence is not None else {}),
             "created_at": utc_now(),
         }
         atomic_write_json(staging / "release.json", release)
@@ -283,6 +384,8 @@ def load_dpo_release(release_dir: Path) -> dict[str, Any]:
         raise ValueError("DPO release payload hash does not match the files")
     if record["files"]["adapter/adapter.safetensors"] != release.get("adapter_sha256"):
         raise ValueError("adapter hash does not match release.json")
+    if record["files"].get(PHYSICAL_EVIDENCE) != release.get("physical_validation_sha256"):
+        raise ValueError("physical validation evidence does not match release.json")
     return release
 
 
@@ -366,6 +469,12 @@ def run_dpo_readback(
         raise ValueError("config processor hash does not match the release")
     if config["decode_eval_sha256"] != release["eval_decode_sha256"]:
         raise ValueError("config decode hash does not match the release")
+    if uses_v2_gate(config["gate"]) or "physical_validation_sha256" in release:
+        state = json.loads((release_dir / "source" / "training_state.json").read_text(encoding="utf-8"))
+        if (not release.get("physical_validation_sha256") or
+                semantic_dpo_config_sha256(config, state["manifest_sha256"]) != release["config_sha256"] or
+                sha256_file(manifest_path) != release["val_manifest_sha256"]):
+            raise ValueError("v2 readback requires matching gate evidence, config and val manifest")
     saved = greedy_fields(read_jsonl(release_dir / "source" / "scored.jsonl"), "saved scored")
     rows = read_manifest(manifest_path)
     if [str(row.get("sample_id")) for row in rows] != list(saved):
@@ -411,6 +520,7 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--output-dir", required=True, type=Path)
     prepare.add_argument("--release-id", required=True)
     prepare.add_argument("--sync-dir", type=Path)
+    prepare.add_argument("--parent-release-dir", type=Path, help="published SFT with val scored rows for the v2 release gate")
     readback = sub.add_parser("readback")
     readback.add_argument("--config", required=True, type=Path)
     readback.add_argument("--release-dir", required=True, type=Path)
@@ -431,11 +541,12 @@ def main(argv: list[str] | None = None) -> int:
                 output_dir=args.output_dir,
                 release_id=args.release_id,
                 sync_dir=args.sync_dir,
+                parent_release_dir=args.parent_release_dir,
             )
             print(f"DPO_RELEASE_STAGED step={release['source_step']} id={release['release_id']}", flush=True)
             return 0
         report = run_dpo_readback(args.config, args.release_dir, args.manifest, sync_dir=args.sync_dir)
-    except (OSError, ValueError, json.JSONDecodeError, RunStop) as exc:
+    except (OSError, ValueError, KeyError, TypeError, RunStop) as exc:
         print(f"DPO_RELEASE_FAIL {exc}", file=sys.stderr)
         return 2
     return 0 if report["matched"] else 1

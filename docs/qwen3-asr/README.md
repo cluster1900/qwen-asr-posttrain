@@ -1,6 +1,6 @@
 # Qwen3-ASR 文档
 
-本目录按功能记录从 baseline 到 SFT、DPO、RL 的新实现。文档先于功能代码更新，所有结论必须关联固定 manifest、配置、随机种子和输出指标。当前只有设计合同和目录合同已建立，尚无本仓库新实现的训练效果结论。
+本目录按功能记录从 baseline 到 SFT、DPO、RL 的实现、实测结果和发布决定。文档先于功能代码更新，所有结论必须关联固定 manifest、配置、随机种子和输出指标。
 
 - `00_reset_plan.md`：本次清理范围、阶段计划和 Colab + Drive 合同。
 - `01_architecture.md`：模块边界、输入输出和阶段关系。
@@ -16,6 +16,8 @@
 - `11_dataset_candidates.md`：公开中文语料候选比较、官方来源、首批抽样建议与接入缺口；候选研究不代表数据审计通过。
 - `12_phase2_run_log.md`：Phase 2–6 全流程运行、消融、发布读回与 Stage 4 终局评测记录。
 - `13_github_full_archive.md`：私有 GitHub 仓库（`cluster1900/qwen-asr-posttrain`）全量数据、权重、83 次运行、日志与结论的 Releases 归档总索引及 SHA-256 校验表。
+- [14_dpo_rl_diagnosis.md](14_dpo_rl_diagnosis.md) 按候选排序、逐句转写、在线采样和零步对照解释 Track 3B 的 DPO 边际增益与 RL 门禁结果。
+- `15_dpo_v2_scale_plan.md`：DPO v2 大规模中文语音语料扩容目录（Tier 1/2/3 与 ShareAlike 只读隔离）、解耦抗锁死门禁合同、LR Warmup + `float32` LoRA 配方及本地离线门禁重放方案（分支 `dpo-v2-scale`）。
 - `00_progress.md`：当前进度、实验结果和阻塞项。
 
 ## 使用顺序

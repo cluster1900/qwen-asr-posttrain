@@ -881,13 +881,13 @@ chosen 固定是 manifest 的原文，`chosen_cer` 为 0。rejected 是 `predict
 范围：新增 Stage 2 父指标固化文件 `configs/train/aishell_slr28_val_dpo_w3s40_20261125.json`、6-step 中断恢复 smoke 配置 `configs/train/rl_track3b_smoke.yaml` 以及 10 份正交 Track 3B RL `scale` 配置 `configs/train/rl_track3b_*.yaml`；不修改任何历史 Phase 1–5 / Track 2 配置与冻结产物。
 
 设计：
-1. **统一冻结父版本与标点匹配组内对齐**：全部配置绑定 `parent_release: dpo_06b_zh_20261125T005003_step000040`、`lora.rank: 16`、`lora.alpha: 32`、`lora.dropout: 0.0`、`rl.allow_matched_punctuation: true`、`rl.loss_token_scope: mismatched_only`、`rl.accumulate_signal_groups_only: true`、`rl.dropout_anchor_weight ∈ {0.0, 0.005, 0.01, 0.02, 0.05}`，并在训练前由独立读回验证的 `dpo_06b_zh_20261125T005003_step000040` 生成与检验同进程 `reference_sha256` 一致的 `eval/step_000000/` 基准前缀（零借用其他模型或历史 run）。
+1. **冻结父版本与候选对齐**。全部配置绑定 `parent_release: dpo_06b_zh_20261125T005003_step000040`、`lora.rank: 16`、`lora.alpha: 32`、`lora.dropout: 0.0`、`rl.allow_matched_punctuation: true`、`rl.loss_token_scope: mismatched_only`、`rl.accumulate_signal_groups_only: true`、`rl.dropout_anchor_weight ∈ {0.0, 0.005, 0.01, 0.02, 0.05}`。设计要求零步奖励与当前精度的参考模型对应。实际运行先校验了 `reference_sha256`，第二、三轮的零步奖励取自 BF16 发布文件。归因所需的 FP32 全量零步对照见 [11 月 26 日复盘](14_dpo_rl_diagnosis.md)。
 2. **可选 `lora.trainable_dtype: float32` 主权重精度修正（RL Wave 2，2026-11-25）**：
    - **背景**：RL Wave 1（10 路 `bf16` LoRA，`lr ∈ [5e-7, 2e-6]`）实测定位到双重根因：（a）长程 SFT(240 步)+DPO(40 步) 后 `lora_A` 中位幅值 `1.45e-2`、`lora_B` 中位 `2.14e-4`，在 `torch.bfloat16`（7 位尾数）下 `lr=5e-7` 造成 `99.72%` `lora_A` 与 `78.17%` `lora_B` 零更新并触发 28 层 `bf16` logit 离散跳变底噪（`KL≈0.00028`）；而 `lr=2e-6` 刚突破下溢线时 `physical_degraded_3` 即逆转为 `-3`（`noise -4`、`far_field -4`）；（b）`dropout_anchor_weight=0.05` 梯度量级（`~0.05`）显著大于 `ga=4` 下 RL 策略梯度（`~0.003`），且 5 步仅见 20 组信号即评测被截停。
    - **设计**：在 `train/sft_schema.py` 与 `train/train_sft.py` 新增可选 `lora.trainable_dtype`（`null | bfloat16 | float32`，缺省 `null` 不写入规范语义哈希，历史配置 100% 零改动）；设为 `float32` 时仅将 4.58M 可训练 LoRA 参数提升至 `float32`（`t3-w1` 实测零步与 `bf16` DPO 冠军 `0/12` 误差，单步更新覆盖率 `lora_A 99.91% / lora_B 100.00%`）；同时在 `load_adapter(..., match_checkpoint_dtype=True)` 中供 Stage 4 评测脚本按各 release 原始保存精度精确加载。Wave 2 同步将 `dropout_anchor_weight` 降至 `{0.0, 0.005, 0.01, 0.02}`、`eval_steps` 设为 `8–10` 步（单评覆盖 32–40 组有效对齐信号）、覆盖 `lr ∈ {1e-6, 2e-6, 3e-6, 5e-6}` 与 `kl_beta ∈ {0.02, 0.05, 0.10}`。
 3. **独立 6-step 中断恢复 Smoke（`rl_track3b_smoke.yaml`）**：`profile: smoke`、`interrupt_after_step: 5`、`save_steps: 5`、`eval_steps: 6`、`max_steps: 6`（10 条 `smoke_manifest/val.jsonl`），已在 `t3-w0` 跑通 Step 1–5 中断 → `--resume` Step 6 完赛（`RL_SMOKE_BOTH_OK=1`）并归档 Drive。
 4. **10 路正交超参覆盖（Wave 1/2）与贪心纠错过滤 + 位移标尺校准（Wave 3，2026-11-25）**：
-   - Wave 1（10 路 `bf16`）与 Wave 2（10 路 `float32`）完赛后，在 `t3-w9` 上实测 `KL_PROBE` 与权重位移标尺定位到最终物理瓶颈：（a）在已选优的 DPO 冠军 `w3s40` 附近，任意 `1e-8` 微扰均触发 28 层 `bfloat16` 舍入重排底噪（`KL ≈ 0.0003–0.0004`、`~10` 条临界平局翻转）；（b）Stage 2 DPO 过关位移为 `lora_B l2 = 4.13e-2, max = 1.24e-4`，而 RL Wave 2（`lr=1e-6, 6 步`）仅移动 `l2 = 3.45e-3, max = 4.94e-6`（小 12–25 倍），且 45% 的信号组中 `greedy` 本身已满分（仅锐化已对句而非纠错）。
+   - 前两轮结束后，`t3-w9` 的 `KL_PROBE` 在 DPO `w3s40` 附近测试了 `1e-8` 微扰，记录到 `KL ≈ 0.0003–0.0004` 和约 10 条临界转写翻转。Stage 2 DPO 的 LoRA B 位移为 `l2 = 4.13e-2, max = 1.24e-4`。第二轮一组 RL（`lr=1e-6`，6 步）的位移为 `l2 = 3.45e-3, max = 4.94e-6`。当时抽查的信号组中有 45% 的贪心输出已经满分，据此在第三轮加大更新幅度并筛选贪心错误组。
    - **设计**：在 `train/rl_schema.py` 与 `train/train_rl.py` 新增可选布尔配置 `rl.require_greedy_suboptimal`（缺省 `false` 不写入历史规范语义哈希，100% 兼容历史配置；设为 `true` 时仅将 `R(greedy) < max(R(aligned))` 的真实 on-policy 贪心纠错组计入信号窗口），并在 `profile: scale` 下放宽 `rl.no_signal_stop_groups` 上限至 `300`。RL Wave 3 在账号 `[4]` 的 5 张 A100 上启用 `float32` LoRA + `require_greedy_suboptimal: true`，对准 DPO 有效位移标尺覆盖 `lr ∈ {1.0e-5, 1.2e-5, 1.5e-5, 2.0e-5}`、`kl_beta ∈ {0.02, 0.05, 0.10}`、`max_edit_count ∈ {1, 2}`、`eval_steps ∈ {12, 15}` 与 `[far_field, reverb]` 专精切片；全部硬门禁阈值（`min_reward_improvement: 0.00002`、`raw_kl_max: 0.001`、`degraded_macro_increase_max: 0.0`）保持不变。
 
 测试：运行 `.venv/bin/python -m unittest discover -s tests -v` 并逐一调用 `train.rl_schema.load_rl_config` 校验全部 11 份配置；A100 上验证 `RL_PREFLIGHT_OK`、`RL_INTERRUPT` + `RL_RESUME`、`reference_matched=true`、`raw_kl <= 0.001` 与全量 2500 条 `val` 门禁。
@@ -896,6 +896,33 @@ chosen 固定是 manifest 的原文，`chosen_cer` 为 0。rejected 是 `predict
 
 影响：为 Stage 4 封存 `test.jsonl` 与只读 `AliMeeting Eval` 四阶段终局对比交付不可变 Track 3B RL release，保持历史 Phase 4 RL release 与测试不受影响。
 
+## DPO v2 解耦抗锁死门禁与 LR Warmup 扩容合同（2026-11-26，分支 `dpo-v2-scale`）
+
+背景：Track 3B DPO Wave 1 离线门禁重放表明，旧门禁将未受训的 `dropout` 场景纳入 4-场景 `degraded_macro_cer` 且对任意微弱超标或早期低 preference 立即执行 `risk_stop=True`，导致实际在物理退化三场景改善的 `t3-w8`（Step 18 `phys3=-3, clean=-2, pref=0.575, gap_ins=0`）与 `t3-w5`（Step 16 `phys3=-2, clean=-1, gap_ins=0`）被提前终止；与此同时，全部真实静音幻觉失败（如 Phase 3 `20261018T132840`、`20261019T012838`、`20261020T041218` Step 41）均具备 `locate_gap_insertions >= 10` 且 `dropout_delta >= +0.001775`，与健康运行的 `gap_ins == 0` 完全可分。详尽设计见 [`15_dpo_v2_scale_plan.md`](15_dpo_v2_scale_plan.md)。
+
+范围：在 `train/sft_schema.py`、`train/sft_contract.py`、`train/dpo_contract.py`、`train/train_dpo.py` 中新增 7 个可选 `gate.*` 字段与硬/软风险分层裁决逻辑，并新增本地离线门禁重放工具 `scripts/replay_dpo_gate.py`。不改动任何历史 `pilot`/`scale` 配置文件及其语义配置 SHA-256，也不放宽 `passed=True` 的最终入选标准。
+
+设计：
+1. **可选 `gate.*` 字段（缺省或取历史默认值时不写入 `resolved["gate"]`，历史语义哈希零变动）**：
+   - `gate.degraded_macro_scenarios`：可选退化场景子集（DPO v2 设为 `["far_field", "noise", "reverb"]`），将未受训的 `dropout` 与主宏平均解耦。
+   - `gate.degraded_macro_stop_increase_max`：可选硬熔断上限（须 `>= degraded_macro_increase_max`；DPO v2 设为 `0.002`）。`macro_delta` 落在 `(degraded_macro_increase_max, degraded_macro_stop_increase_max]` 时仅计软风险（`passed=False` 不可入选，不立即中止）；超过 `stop_max` 立即硬熔断。
+   - `gate.dropout_cer_increase_max`：可选未受训 `dropout` 独立硬熔断上限（`>= 0.0`；DPO v2 设为 `0.002`）。
+   - `gate.max_gap_insertions`：可选静音段插入硬熔断上限（整数 `>= 0`；DPO v2 设为 `5`），校验 `locate["locate_gap_insertions"]`，任何步数越界均立即硬熔断。
+   - `gate.stop_on_low_preference`：可选布尔值（缺省 `true`；DPO v2 设为 `false`），使低 `preference_accuracy` 仅阻断 `passed=True` 而不在单次早期评测强杀训练。
+   - `gate.min_stop_step`：可选预热保护观察窗步数（整数 `>= 0`；DPO v2 默认设为 `100` 覆盖 warmup 与首评），在 `step <= min_stop_step` 期间仅硬安全风险触发 `risk_stop=True`。
+   - `gate.max_consecutive_non_passing_evals`：可选耐心早停上限（整数 `>= 1`；DPO v2 设为 `2`），在 `step > min_stop_step` 后连续 `K` 次 `passed=False` 即触发 `risk_stop=True` 止损。
+2. 默认四组统一 FP32 LoRA、累积 `16`、**`500` 步（`8,000` 对次）**、预热 `50` 步与余弦退火（末步学习率为峰值的 10%）、每 `100` 步评测（共 5 次全量评测，单次 360 分钟 A100 会话可完赛）。`256` 对子集与至少 `8,000` 对的大池各比较峰值 `5e-6` 和 `1e-5`，固定 `beta=0.1` 和 dropout 锚权重 `0.02`。开跑前通过 `scripts/rehearse_dpo_schedule.py` 对每步音频数（`ga`）做步数、梯度截断、尾步与耗时预演，并通过 `scripts/prepare_dpo_v2_sweep.py --ga <K>` 灵活调整并自动校验不可变 YAML。
+
+测试：运行 `.venv/bin/python -m unittest tests.test_dpo_v2_gate tests.test_dpo_v2_inputs tests.test_dpo_contract tests.test_rl_contract tests.test_train_sft tests.test_track3_scale_contracts tests.test_directory_readmes -v`、`.venv/bin/python scripts/replay_dpo_gate.py` 与 `.venv/bin/python scripts/rehearse_dpo_schedule.py sweep --train-pairs 8000 --ga-list 4,8,10,12,16,20,24,32,64 --drop-tiny-tail`。验证历史配置语义哈希零漂移、所有 7 项合成边界压测通过、历史静音幻觉 `20261018T132840` 被新门禁立即硬熔断、Wave 1 `t3-w8`/`t3-w5` 不再被误杀、LR Warmup 曲线逐点准确，以及多档 `ga` 预演与灵活 `--ga` 配方生成全部通过。
+
+验收：本地全量单元测试、离线门禁重放与多档 `ga` 步数/耗时预演全部通过；后续在 Colab A100 上完成 6-step DPO v2 smoke 与大规模语料正式训练后，仍须通过 DPO v2 门禁、配对源簇 Bootstrap 数学期望检验与独立进程 2,500 条读回才可发布。
+
+影响：完全向后兼容既有 SFT / DPO / RL 训练与发布管线；在不放松选点红线的前提下消除步数过少、早期误杀与单会话评测超时风险，同时加强静音幻觉精准熔断。
+
 ## 影响与未验证项
 
 此次修正将 DPO 序列归约、阶段 adapter 衔接、RL 混合采样的偏差、KL 门禁测量、累积退化门禁和恢复状态变成明确合同。新实现需按这些合同构建，不能直接沿用旧历史结果。A100 容量、依赖组合、最佳超参数、数据规模、KL/健康度阈值适用性及 CER 改善仍需真实 smoke/pilot；当前没有效果证据，更不能宣称达到或超过 Mega-ASR。
+
+## DPO v2 首轮对照与发布条件
+
+固定大、小池和两档 LR 四组，默认统一 `500` 步、累积 `16`（可通过 `scripts/rehearse_dpo_schedule.py` 预演并用 `scripts/prepare_dpo_v2_sweep.py --ga` 灵活调整），比较实际对次、独立源句、固定偏好组与全量贪心 CER。零步验证与参考缓存使用相同精度和设备型号，恢复时尊重已记录的硬停。正式候选需达到 20 字编辑净减和源句簇配对 95% 区间上界小于零。运行参数见 [首轮实验](15_dpo_v2_scale_plan.md)。

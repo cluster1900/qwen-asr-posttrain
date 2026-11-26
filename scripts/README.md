@@ -27,8 +27,13 @@
 - `gcp_drive_sync.py`：通过 GCP `gcloud` 访问令牌执行 Google Drive v3 可恢复上传、下载与列举，强制锁定主工程目录 `MyDrive/qwen3-asr`（Folder ID `1OWJDWy_iQ1N8hZbLKQOVWhYqwCyDIr-Z`），拒绝路径穿越并逐文件核对远端字节大小与 `md5Checksum`。
 - `run_sharded_decode.py`：多 A100 确定性分片 greedy 推理与严格按 `sample_id` 顺序合并工具，复用训练/发布统一 `decode_eval_rows` 路径，支持断点续跑、锁定 `jieba` WER 评测及 `qwen3-asr-baseline-v1` 基准文件生成。
 - `align_train_punctuation.py`：Phase 6 Track 3B 训练集 Clean 自对齐标点恢复脚本。读取仅限 `train` split 的 Base `clean` 音频 greedy 预测，通过 Levenshtein 字符对齐把自然韵律标点投射回官方 AISHELL-1 `text` 生成 `train_punct.jsonl`（新增 `text_punct` 字段，保留原始 `text` 不变，对 `100%` 训练行强断言 `normalize_zh(text_punct) == normalize_zh(text)`，严禁触碰 `val`/`test`），并输出审计文件 `train_punct_audit.json`。
+- `prepare_dpo_v2_sweep.py`：CPU 校验已物化的 manifest、pair metadata 与参考缓存，按 `configs/experiments/dpo_v2_sweep.yaml` 原子生成四组可启动的 YAML。传入 `--manifest-dir`、`--pair-metadata`、`--pairs-dir` 与新建的 `--output-dir`；支持可选 `--ga`、`--max-steps`、`--warmup-steps`、`--eval-steps`、`--min-stop-step` 与 `--rehearse-only` 灵活调整每步音频数和步数预算并先做本地预演，缺同源 clean、dropout 锚、固定验证对、同精度参考缓存或大池对数不足 `max_steps × ga` 时退出失败。
+- `rehearse_dpo_schedule.py`：DPO v2 每步音频数（`ga`）、总步数、梯度裁剪、门禁最早早停步与实测标定 A100 耗时的本地纯 CPU 预演工具（`sweep` 子命令）。复用生产 `iterate_updates`、`lr_multiplier` 与 `judge_dpo_checkpoint`，支持直接输入 `--train-pairs N` 或 `--pair-train <train_pairs.jsonl>`，在开跑前暴露步数过少（`<200`）、重梯度截断（`est_gn>1.8`）、短尾步和 360 分钟单会话超时风险，并标出推荐 `ga` 档位（可选 `--output-json`）。
+- `replay_dpo_gate.py`：DPO v2 本地离线门禁重放、合成边界压测与 LR Warmup 曲线核查 CLI（纯 CPU、无需下载模型）。复用生产合同 `judge_dpo_checkpoint`、`select_sft_checkpoint` 与 `lr_multiplier`，将本地 Track 3B DPO Wave 1 与 Phase 3 真实静音幻觉（`Human Rights Watch`）运行在旧门禁与 DPO v2 解耦抗锁死门禁下逐步对照，并运行 7 项安全/抗锁死边界压测及 Warmup+Cosine 日程校验，默认要求九组十二步及 Phase 3 事故齐全。每组只在首个硬停之前通过的评测点中选点，`--output-json` 保存证据，`--skip-local-runs` 单独运行合成检查。
 
 `drive_sync.py` 还没有实现。checkpoint 恢复属于 Phase 2。正式配置的 `source_version` 是 `aishell1-openslr33-pilot-20261015`。
+
+DPO v2 建对时给 `build_dpo_pairs.py` 传入 `--require-clean-controls --align-punctuation-from-rejected`。训练清单须包含同源 clean 音频与带父 adapter 身份的预测，使用锚时还需同一切分的 dropout 音频与预测。每条物理训练偏好对写入 `clean_prediction_normalized`。
 
 ## 主要输入输出
 

@@ -1,0 +1,24 @@
+template: configs/train/dpo_track3b_e1_excl_lr5e6_b02_ga4.yaml
+learning_rates: [0.000005, 0.00001]
+small_pool_pairs: 256
+common:
+  lora: {trainable_dtype: float32}
+  batch: {gradient_accumulation_steps: 16}
+  optim: {warmup_steps: 50, min_lr_ratio: 0.1}
+  train: {max_steps: 500, eval_steps: 100, save_steps: 100, keep_last: 5}
+  dpo:
+    min_train_pairs: 8000
+    beta: 0.1
+    max_edit_count: 2
+    ref_margin_min: -8.0
+    dropout_anchor_weight: 0.02
+    val_cohort: configs/train/dpo_track3b_val_cohorts.json
+    val_cohort_sha256: 69b6903f352263517e6e9eaba56ed0b51742e7117a08f5fd205a70e1ddf7927c
+  gate:
+    degraded_macro_scenarios: [far_field, noise, reverb]
+    degraded_macro_stop_increase_max: 0.002
+    dropout_cer_increase_max: 0.002
+    max_gap_insertions: 5
+    stop_on_low_preference: false
+    min_stop_step: 100
+    max_consecutive_non_passing_evals: 2

@@ -284,9 +284,15 @@ def partial_decode_stop_record(
 DEGRADED_SCENARIOS = ("dropout", "far_field", "noise", "reverb")
 
 
-def degraded_macro_cer(by_scenario: dict[str, Any]) -> float:
-    """Equal-weight mean of the four degraded scenario micro CERs."""
-    return sum(float(by_scenario[name]["micro_cer"]) for name in DEGRADED_SCENARIOS) / len(DEGRADED_SCENARIOS)
+def degraded_macro_cer(
+    by_scenario: dict[str, Any],
+    scenarios: Iterable[str] = DEGRADED_SCENARIOS,
+) -> float:
+    """Equal-weight mean of the selected degraded scenario micro CERs."""
+    names = tuple(scenarios)
+    if not names:
+        raise ValueError("degraded_macro_cer requires at least one scenario")
+    return sum(float(by_scenario[name]["micro_cer"]) for name in names) / len(names)
 
 
 def judge_sft_checkpoint(
@@ -295,13 +301,15 @@ def judge_sft_checkpoint(
     gate: dict[str, Any],
 ) -> dict[str, Any]:
     """Judge one full val against the pinned base. Comparisons use raw micro CER."""
-    risks: list[str] = []
+    hard_risks: list[str] = []
+    soft_risks: list[str] = []
     by_scenario = metrics["by_scenario"]
     base_scenarios = baseline["by_scenario"]
+    macro_scenarios = tuple(gate.get("degraded_macro_scenarios") or DEGRADED_SCENARIOS)
     for name in SCENARIOS:
         samples = int(by_scenario[name]["samples"])
         if samples < int(gate["min_rows_per_scenario"]):
-            risks.append(f"{name} has {samples} rows")
+            hard_risks.append(f"{name} has {samples} rows")
     scopes = [("overall", metrics), *[(name, by_scenario[name]) for name in SCENARIOS]]
     limits = (
         ("empty_rate", "empty_rate_max"),
@@ -314,36 +322,52 @@ def judge_sft_checkpoint(
             value = float(block[field])
             limit = float(gate[limit_name])
             if value > limit:
-                risks.append(f"{scope} {field} {value} exceeds {limit}")
+                hard_risks.append(f"{scope} {field} {value} exceeds {limit}")
         valid = float(block["valid_output_rate"])
         minimum = float(gate["valid_output_rate_min"])
         if valid < minimum:
-            risks.append(f"{scope} valid_output_rate {valid} is below {minimum}")
+            hard_risks.append(f"{scope} valid_output_rate {valid} is below {minimum}")
     clean_delta = float(by_scenario["clean"]["micro_cer"]) - float(base_scenarios["clean"]["micro_cer"])
     if clean_delta > float(gate["clean_cer_increase_max"]):
-        risks.append(f"clean micro CER increased by {clean_delta}")
+        hard_risks.append(f"clean micro CER increased by {clean_delta}")
     if clean_delta > float(gate["clean_cer_increase_vs_base_max"]):
-        risks.append(f"clean micro CER increased by {clean_delta} against the base cap")
+        hard_risks.append(f"clean micro CER increased by {clean_delta} against the base cap")
     degraded_deltas = {}
     for name in DEGRADED_SCENARIOS:
         delta = float(by_scenario[name]["micro_cer"]) - float(base_scenarios[name]["micro_cer"])
         degraded_deltas[name] = delta
         if delta > float(gate["scenario_cer_increase_max"]):
-            risks.append(f"{name} micro CER increased by {delta}")
-    macro_delta = degraded_macro_cer(by_scenario) - degraded_macro_cer(base_scenarios)
-    if macro_delta > float(gate["degraded_macro_increase_max"]):
-        risks.append(f"degraded macro CER increased by {macro_delta}")
-    improved = sum(1 for delta in degraded_deltas.values() if delta < 0.0)
+            hard_risks.append(f"{name} micro CER increased by {delta}")
+    dropout_cap = gate.get("dropout_cer_increase_max")
+    if dropout_cap is not None and degraded_deltas["dropout"] > float(dropout_cap):
+        hard_risks.append(
+            f"dropout micro CER increased by {degraded_deltas['dropout']} (cap {float(dropout_cap)})"
+        )
+    macro_cer = degraded_macro_cer(by_scenario, macro_scenarios)
+    base_macro_cer = degraded_macro_cer(base_scenarios, macro_scenarios)
+    macro_delta = macro_cer - base_macro_cer
+    pass_max = float(gate["degraded_macro_increase_max"])
+    stop_max_raw = gate.get("degraded_macro_stop_increase_max")
+    stop_max = pass_max if stop_max_raw is None else float(stop_max_raw)
+    if macro_delta > stop_max:
+        hard_risks.append(f"degraded macro CER increased by {macro_delta}")
+    elif macro_delta > pass_max:
+        soft_risks.append(f"degraded macro CER increased by {macro_delta} (soft band <= {stop_max})")
+    improved = sum(1 for name in macro_scenarios if degraded_deltas[name] < 0.0)
+    risks = hard_risks + soft_risks
     return {
         "passed": not risks and improved >= int(gate["min_improved_degraded_scenarios"]),
-        "risk_stop": bool(risks),
+        "risk_stop": bool(hard_risks),
         "improved_degraded_scenarios": improved,
         "clean_cer": float(by_scenario["clean"]["micro_cer"]),
-        "degraded_macro_cer": degraded_macro_cer(by_scenario),
+        "degraded_macro_cer": macro_cer,
+        "degraded_macro_scenarios": list(macro_scenarios),
         "clean_delta": clean_delta,
         "degraded_deltas": degraded_deltas,
         "macro_delta": macro_delta,
         "risks": risks,
+        "hard_risks": hard_risks,
+        "soft_risks": soft_risks,
     }
 
 

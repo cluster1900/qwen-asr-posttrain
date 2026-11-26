@@ -1,6 +1,6 @@
 # 数据方案
 
-最后更新：2026-11-24
+最后更新：2026-11-26
 
 ## 背景与范围
 
@@ -191,4 +191,21 @@ P9 的 50 条只覆盖本机已解压的 train `S0002`、`S0003`、`S0004`，而
 - **验收**：本地合同测试退出码 `0`；真实 `train_punct.jsonl`（`19,685` 行）全部通过零字符偏差断言（`char_mismatch == 0`）、标点恢复率 `>= 95%`，归档至 `MyDrive/qwen3-asr/data/aishell1_slr28/20261124/` 并完成 MD5 校验。
 - **影响**：完全不覆盖或修改原始 `train.jsonl`、`val.jsonl`、`test.jsonl` 及任何历史配置哈希；通过 SFT 配置可选字段 `data.target_text_field: text_punct` 显式启用。
 
+### DPO v2 多语料中文扩容路线与合规边界（2026-11-26，分支 `dpo-v2-scale`）
+
+- **背景**：Track 3B DPO v1 仅基于 AISHELL-1 官方 150h 训练集中的 5h 子集（`3,937` 源语句，占 `3.2%`），经对齐与去 clean 同音拷贝过滤后仅剩 `243` 条单字训练对（Step 40 仅见过 `160` 对），导致 DPO 相对 SFT 的声学纠错幅度受数据量天花板锁死。
+- **范围**：规划并规范 DPO v2 的三层中文开源语料扩容目录、零泄漏去重规则与许可证隔离边界（完整明细见 [`15_dpo_v2_scale_plan.md`](15_dpo_v2_scale_plan.md)）；本阶段不改动任何既有 Phase 1–6 manifest、不修改冻结 `val.jsonl`/`test.jsonl`/`AliMeeting Eval`，也不在本地 CPU 下载大规模音频。
+- **设计**：
+  1. **Tier 1（立即 10×–30× 扩容）**：释放 **AISHELL-1 Full Train**（OpenSLR 33，~150h，`120,098` 句，340 名官方 `train` 说话人，沿用非商业学术研究交集最严原则）首批 50h–100h 叠加 SLR28 物理 RIR/真实噪声，并补充纯商可用 **THCHS-30**（OpenSLR 18，~30–35h，Apache-2.0）与公有领域 **Common Voice zh-CN**（CC0-1.0）。
+  2. **Tier 2（真实噪声、自然口语与真实远场）**：接入 **WenetSpeech S / M**（OpenSLR 121，100h / 1,000h 高置信子集 `confidence >= 0.95`，CC BY 4.0 学术非商）、**RealMAN**（HF `AISHELL/RealMAN`，83.7h 真实多场景语音 + 144.5h 真实噪声，固定单通道提取，CC BY 4.0 无 ShareAlike）及 **Emilia-YODAS ZH**（CC BY 4.0 子集），打破朗读体与合成噪声的分布局限。
+  3. **Tier 3（学术非商高容量备选）**：**MagicData-RAMC**（OpenSLR 123，180h 自由对话，CC BY-NC-ND 4.0）、**Aidatatang_200zh**（OpenSLR 62，200h）、**ST-CMDS**（OpenSLR 38，100h）与 **KeSpeech**（1,542h）。
+  4. **严格只读隔离区**：**AliMeeting**（OpenSLR 119，CC BY-SA 4.0）与 **AISHELL-4**（OpenSLR 111，CC BY-SA 4.0）始终保持 `trainable: false`，严禁混入任何训练集或偏好对。
+  5. **零泄漏切分铁律**：所有新增语料必须按 `speaker_id` / `recording_id` 分组且做归一化文本 SHA-256 交集审计，确保与冻结 `val.jsonl`、`test.jsonl` 及 `AliMeeting Eval` 严格零重叠；目标产出 **`5,000–15,000+`** 高信号纯声学 DPO 偏好对。
+- **测试与验收**：后续物化每批新增语料时均须通过 `manifest_validate.py --check-audio` 与跨 split 说话人/音频/文本零泄漏审计，退出码 `0` 且 `sha256.json` 验签通过后方可进入 SFT 推理与 DPO pair 构建。
+- **影响**：仅增量扩展训练集语料池，验证/测试/OOD 评测基准 100% 保持原样，确保 DPO v2 与 Track 3B 基线严格同口径可比。
+
 采用相对路径、文件级 split、纯文本 `text` 和显式 source ID 后，旧的绝对路径 manifest、混入特殊 token 的标注和未带版本 hash 的结果不能直接复用；必须重新物化或提供迁移报告。该合同同时支持本地单测和 Colab Drive 恢复，不改变外部数据原始文件。
+
+## DPO v2 的 clean 对照、锚池与留出身份
+
+建对前按训练源句连接 clean 与物理场景。使用父模型同源 clean 预测排除共有错误，带锚组并入训练 split 的 dropout 样本。固定主组 160 对与补充组 82 对，候选文本和 ID 均须一致。验证与测试音频保持冻结。具体输入与核对方法见 [DPO v2 方案](15_dpo_v2_scale_plan.md)。

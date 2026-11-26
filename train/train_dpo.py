@@ -15,6 +15,7 @@ import re
 import sys
 import time
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -33,10 +34,13 @@ from train.dpo_contract import (  # noqa: E402
     listen_waiver_record,
     locate_dropout_edits,
     mismatched_token_mask,
+    resume_gate_action,
     select_dropout_anchor_rows,
     select_training_pairs,
+    trailing_non_passing_evals,
     validate_pair_rows,
 )
+from train.dpo_v2 import check_reference_context, check_step0_score, fixed_val_cohorts, physical_clean_map, uses_v2_gate
 from train.dpo_schema import load_dpo_config, semantic_dpo_config_sha256  # noqa: E402
 from train.reference_logprob import (  # noqa: E402
     completed_logprob_rows,
@@ -48,7 +52,7 @@ from train.reference_logprob import (  # noqa: E402
 from train.sft_checkpoint import atomic_write_json, atomic_write_text, step_name, utc_now  # noqa: E402
 from train.sft_contract import (  # noqa: E402
     iterate_updates,
-    pending_checkpoint_eval,
+    epoch_order,
     runtime_budget_disabled,
     runtime_budget_exceeded,
     select_sft_checkpoint,
@@ -119,7 +123,7 @@ def _require_sha(path: Path, expected: str, label: str) -> None:
         raise RunStop("data_failed", f"{label} sha256 {digest} does not match the config", 4)
 
 
-def _check_null_pairs(directory: Path, config: dict[str, Any]) -> None:
+def check_null_pairs(directory: Path, config: dict[str, Any]) -> None:
     dpo = config["dpo"]
     for name, key in (
         ("train_pairs.jsonl", "null_train_pairs_sha256"),
@@ -129,9 +133,12 @@ def _check_null_pairs(directory: Path, config: dict[str, Any]) -> None:
         if not path.is_file():
             raise RunStop("data_failed", f"missing null pair file {path}", 4)
         _require_sha(path, dpo[key], name)
-        first = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
-        if first.get("ref_chosen_logp") is not None or first.get("ref_rejected_logp") is not None:
-            raise RunStop("data_failed", f"{name} no longer has null reference logprobs", 4)
+        with path.open(encoding="utf-8") as source:
+            for line in source:
+                if line.strip():
+                    row = json.loads(line)
+                    if row["ref_chosen_logp"] is not None or row["ref_rejected_logp"] is not None:
+                        raise RunStop("data_failed", f"{name} no longer has null reference logprobs", 4)
     audit_path = directory / "pair_audit.json"
     if audit_path.is_file():
         try:
@@ -140,21 +147,27 @@ def _check_null_pairs(directory: Path, config: dict[str, Any]) -> None:
             raise RunStop("data_failed", str(exc), 4) from exc
 
 
-def _check_metadata(path: Path, config: dict[str, Any], release: dict[str, Any]) -> str:
+def check_input_metadata(path: Path, config: dict[str, Any], release: dict[str, Any]) -> str:
     pinned = config["dpo"].get("pair_metadata_sha256")
     if pinned:
         _require_sha(path, pinned, "pair metadata")
     payload = json.loads(path.read_text(encoding="utf-8"))
     try:
         check_pair_metadata(payload, config, release)
-    except ValueError as exc:
+        if uses_v2_gate(config["gate"]):
+            if payload.get("status") != "pairs_built":
+                raise ValueError("pair metadata status is not pairs_built")
+            for split in ("train", "val"):
+                _require_sha(resolve_from_repo(Path(config["data"][f"{split}_manifest"])),
+                             payload[f"{split}_manifest_sha256"], f"{split} manifest in pair metadata")
+    except (OSError, KeyError, ValueError) as exc:
         raise RunStop("data_failed", str(exc), 4) from exc
     return sha256_file(path)
 
 
 def _check_cache(path: Path, train_pairs: list[dict[str, Any]], val_pairs: list[dict[str, Any]]) -> None:
-    cached = completed_logprob_rows(path, ordered_pairs(train_pairs, val_pairs))
     expected = ordered_pairs(train_pairs, val_pairs)
+    cached = completed_logprob_rows(path, expected)
     if len(cached) != len(expected):
         raise RunStop("data_failed", "reference cache does not cover every pair", 4)
     for pair, saved in zip(expected, cached):
@@ -317,6 +330,144 @@ def write_gate(
     atomic_write_json(run_dir / "gate.json", payload)
 
 
+@dataclass
+class DpoPairSets:
+    train: list[dict]
+    primary: list[dict]
+    supplemental: list[dict]
+    unfiltered_val: list[dict]
+    anchors: list[dict]
+    pool_size: int
+    train_counts: dict
+    val_counts: dict
+
+
+def prepare_pair_sets(config: dict, gpu_name: str | None = None) -> DpoPairSets:
+    """Validate the cache and build the same pair sets for offline preparation and training."""
+    pair_train = read_jsonl(resolve_from_repo(Path(config["dpo"]["pair_train_manifest"])))
+    pair_val = read_jsonl(resolve_from_repo(Path(config["dpo"]["pair_val_manifest"])))
+    min_per_scenario = int(config["dpo"]["min_pairs_per_scenario"])
+    allow_matched_punctuation = bool(config["dpo"].get("allow_matched_punctuation", False))
+    v2 = uses_v2_gate(config["gate"])
+    scenarios = config["dpo"]["train_scenarios"]
+    val_scenarios = config["dpo"].get("val_scenarios") or scenarios
+    train_counts = validate_pair_rows(
+        pair_train,
+        required_scenarios=tuple(scenarios) if v2 and scenarios else None,
+        split="train",
+        min_per_scenario=min_per_scenario,
+        allow_matched_punctuation=allow_matched_punctuation,
+    )
+    val_counts = validate_pair_rows(
+        pair_val,
+        required_scenarios=tuple(val_scenarios) if v2 and val_scenarios else None,
+        split="val",
+        min_per_scenario=min_per_scenario,
+        allow_matched_punctuation=allow_matched_punctuation,
+    )
+    _require_sha(
+        resolve_from_repo(Path(config["dpo"]["pair_train_manifest"])),
+        config["dpo"]["filled_train_pairs_sha256"],
+        "filled train pairs",
+    )
+    _require_sha(
+        resolve_from_repo(Path(config["dpo"]["pair_val_manifest"])),
+        config["dpo"]["filled_val_pairs_sha256"],
+        "filled val pairs",
+    )
+    cache_path = resolve_from_repo(Path(config["dpo"]["reference_cache"]))
+    report_path = resolve_from_repo(Path(config["dpo"]["reference_report"]))
+    _require_sha(cache_path, config["dpo"]["reference_cache_sha256"], "reference cache")
+    _require_sha(report_path, config["dpo"]["reference_report_sha256"], "reference report")
+    ref_report = json.loads(report_path.read_text(encoding="utf-8"))
+    if ref_report.get("status") != "reference_cached":
+        raise RunStop("data_failed", "reference report is not reference_cached", 4)
+    _check_cache(cache_path, pair_train, pair_val)
+    # The cache check above sees the full pair files. Filtering stays in memory.
+    if v2:
+        check_reference_context(ref_report, config, gpu_name)
+        if (ref_report.get("train_pairs") != len(pair_train) or ref_report.get("val_pairs") != len(pair_val)
+                or ref_report.get("rows") != len(pair_train) + len(pair_val)):
+            raise ValueError("reference report counts differ from the full pair files")
+        if {row["source_utterance_id"] for row in pair_train}.intersection(row["source_utterance_id"] for row in pair_val):
+            raise ValueError("train and held-out pairs share a source utterance")
+    exclude_clean_identical = bool(config["dpo"].get("exclude_clean_identical_rejected", False))
+    clean_rejected_map = None
+    if exclude_clean_identical:
+        clean_rejected_map = physical_clean_map(pair_train) if v2 else build_clean_rejected_map(pair_train)
+    max_edit_count = config["dpo"].get("max_edit_count")
+    pair_filter_kwargs = {
+        "aligned_substitution_only": bool(config["dpo"].get("aligned_substitution_only", False)),
+        "allow_matched_punctuation": allow_matched_punctuation,
+        "ref_margin_min": config["dpo"].get("ref_margin_min"),
+        "ref_margin_max": config["dpo"].get("ref_margin_max"),
+    }
+    train_filter_kwargs = {
+        **pair_filter_kwargs,
+        "max_edit_count": max_edit_count,
+        "exclude_clean_identical_rejected": exclude_clean_identical,
+        "clean_rejected_by_utterance": clean_rejected_map,
+    }
+    train_pair_rows = select_training_pairs(pair_train, scenarios, **train_filter_kwargs)
+    supplemental = []
+    if v2:
+        cohort = Path(config["dpo"]["val_cohort"])
+        _require_sha(cohort, config["dpo"]["val_cohort_sha256"], "val cohort")
+        pref_rows, supplemental = fixed_val_cohorts(pair_val, json.loads(cohort.read_text(encoding="utf-8")))
+    else:
+        pref_rows = select_training_pairs(pair_val, val_scenarios, **pair_filter_kwargs)
+    pool_size = len(train_pair_rows)
+    limit = config["dpo"].get("train_pair_limit")
+    if limit is not None:
+        if limit > pool_size:
+            raise RunStop("data_failed", f"requested {limit} pairs from a pool of {pool_size}", 4)
+        train_pair_rows = epoch_order(train_pair_rows, int(config["seed"]), 0)[:limit]
+    if (
+        scenarios is not None
+        or val_scenarios is not None
+        or exclude_clean_identical
+        or max_edit_count is not None
+        or any(value is not None and value is not False for value in pair_filter_kwargs.values())
+    ):
+        required_train_scenarios = tuple(scenarios) if scenarios is not None else SCENARIOS
+        required_val_scenarios = tuple(val_scenarios) if val_scenarios is not None else SCENARIOS
+        train_counts = validate_pair_rows(
+            train_pair_rows,
+            split="train",
+            min_per_scenario=min_per_scenario,
+            required_scenarios=required_train_scenarios,
+            allow_matched_punctuation=allow_matched_punctuation,
+        )
+        val_counts = validate_pair_rows(
+            pref_rows,
+            split="val",
+            min_per_scenario=min_per_scenario,
+            required_scenarios=required_val_scenarios,
+            allow_matched_punctuation=allow_matched_punctuation,
+        )
+    if pool_size < int(config["dpo"]["min_train_pairs"]) or len(pref_rows) < int(config["gate"]["min_val_pairs"]):
+        raise RunStop("data_failed", "pair count is below the DPO floor", 4)
+    scenario_label = "all" if scenarios is None else ",".join(scenarios)
+    val_scenario_label = "all" if val_scenarios is None else ",".join(val_scenarios)
+    print(
+        f"DPO_TRAIN_SCENARIOS {scenario_label} val_scenarios={val_scenario_label} "
+        f"pool={pool_size} train_pairs={len(train_pair_rows)} val_pairs={len(pref_rows)} supplemental={len(supplemental)}",
+        flush=True,
+    )
+    anchor_weight = float(config["dpo"].get("dropout_anchor_weight", 0.0))
+    anchor_samples_per_step = int(config["dpo"].get("dropout_anchor_samples_per_step", 1))
+    anchor_rows = select_dropout_anchor_rows(pair_train) if anchor_weight > 0.0 else []
+    if anchor_weight > 0.0 and not anchor_rows:
+        raise RunStop("data_failed", "dropout anchor has no parent hypotheses", 4)
+    if anchor_rows:
+        samples_note = "" if anchor_samples_per_step == 1 else f" samples_per_step={anchor_samples_per_step}"
+        print(
+            f"DPO_ANCHOR rows={len(anchor_rows)} weight={anchor_weight:.8g} target=rejected_text{samples_note}",
+            flush=True,
+        )
+    return DpoPairSets(train_pair_rows, pref_rows, supplemental, pair_val, anchor_rows, pool_size, train_counts, val_counts)
+
+
 def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state: dict[str, Any] | None) -> int:
     import torch
 
@@ -351,105 +502,16 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
         val_rows = read_jsonl(val_manifest)
         validate_rows(train_rows, "train")
         validate_rows(val_rows, "val")
-        pair_train = read_jsonl(resolve_from_repo(Path(config["dpo"]["pair_train_manifest"])))
-        pair_val = read_jsonl(resolve_from_repo(Path(config["dpo"]["pair_val_manifest"])))
-        min_per_scenario = int(config["dpo"]["min_pairs_per_scenario"])
-        allow_matched_punctuation = bool(config["dpo"].get("allow_matched_punctuation", False))
-        train_counts = validate_pair_rows(
-            pair_train,
-            split="train",
-            min_per_scenario=min_per_scenario,
-            allow_matched_punctuation=allow_matched_punctuation,
-        )
-        val_counts = validate_pair_rows(
-            pair_val,
-            split="val",
-            min_per_scenario=min_per_scenario,
-            allow_matched_punctuation=allow_matched_punctuation,
-        )
-        _require_sha(
-            resolve_from_repo(Path(config["dpo"]["pair_train_manifest"])),
-            config["dpo"]["filled_train_pairs_sha256"],
-            "filled train pairs",
-        )
-        _require_sha(
-            resolve_from_repo(Path(config["dpo"]["pair_val_manifest"])),
-            config["dpo"]["filled_val_pairs_sha256"],
-            "filled val pairs",
-        )
-        cache_path = resolve_from_repo(Path(config["dpo"]["reference_cache"]))
-        report_path = resolve_from_repo(Path(config["dpo"]["reference_report"]))
-        _require_sha(cache_path, config["dpo"]["reference_cache_sha256"], "reference cache")
-        _require_sha(report_path, config["dpo"]["reference_report_sha256"], "reference report")
-        ref_report = json.loads(report_path.read_text(encoding="utf-8"))
-        if ref_report.get("status") != "reference_cached":
-            raise RunStop("data_failed", "reference report is not reference_cached", 4)
-        _check_cache(cache_path, pair_train, pair_val)
-        # The cache check above sees the full pair files. Filtering stays in memory.
-        scenarios = config["dpo"]["train_scenarios"]
-        val_scenarios = config["dpo"].get("val_scenarios")
-        if val_scenarios is None:
-            val_scenarios = scenarios
-        exclude_clean_identical = bool(config["dpo"].get("exclude_clean_identical_rejected", False))
-        clean_rejected_map = build_clean_rejected_map(pair_train) if exclude_clean_identical else None
-        max_edit_count = config["dpo"].get("max_edit_count")
-        pair_filter_kwargs = {
-            "aligned_substitution_only": bool(config["dpo"].get("aligned_substitution_only", False)),
-            "allow_matched_punctuation": allow_matched_punctuation,
-            "ref_margin_min": config["dpo"].get("ref_margin_min"),
-            "ref_margin_max": config["dpo"].get("ref_margin_max"),
-        }
-        train_filter_kwargs = {
-            **pair_filter_kwargs,
-            "max_edit_count": max_edit_count,
-            "exclude_clean_identical_rejected": exclude_clean_identical,
-            "clean_rejected_by_utterance": clean_rejected_map,
-        }
-        train_pair_rows = select_training_pairs(pair_train, scenarios, **train_filter_kwargs)
-        pref_rows = select_training_pairs(pair_val, val_scenarios, **pair_filter_kwargs)
-        if (
-            scenarios is not None
-            or val_scenarios is not None
-            or exclude_clean_identical
-            or max_edit_count is not None
-            or any(value is not None and value is not False for value in pair_filter_kwargs.values())
-        ):
-            required_train_scenarios = tuple(scenarios) if scenarios is not None else SCENARIOS
-            required_val_scenarios = tuple(val_scenarios) if val_scenarios is not None else SCENARIOS
-            train_counts = validate_pair_rows(
-                train_pair_rows,
-                split="train",
-                min_per_scenario=min_per_scenario,
-                required_scenarios=required_train_scenarios,
-                allow_matched_punctuation=allow_matched_punctuation,
-            )
-            val_counts = validate_pair_rows(
-                pref_rows,
-                split="val",
-                min_per_scenario=min_per_scenario,
-                required_scenarios=required_val_scenarios,
-                allow_matched_punctuation=allow_matched_punctuation,
-            )
-        if len(train_pair_rows) < int(config["dpo"]["min_train_pairs"]) or len(pref_rows) < int(config["gate"]["min_val_pairs"]):
-            raise RunStop("data_failed", "pair count is below the DPO floor", 4)
-        scenario_label = "all" if scenarios is None else ",".join(scenarios)
-        val_scenario_label = "all" if val_scenarios is None else ",".join(val_scenarios)
-        print(
-            f"DPO_TRAIN_SCENARIOS {scenario_label} val_scenarios={val_scenario_label} "
-            f"train_pairs={len(train_pair_rows)} val_pairs={len(pref_rows)}",
-            flush=True,
-        )
-        anchor_weight = float(config["dpo"].get("dropout_anchor_weight", 0.0))
-        anchor_samples_per_step = int(config["dpo"].get("dropout_anchor_samples_per_step", 1))
-        anchor_rows = select_dropout_anchor_rows(pair_train) if anchor_weight > 0.0 else []
-        if anchor_weight > 0.0 and not anchor_rows:
-            raise RunStop("data_failed", "dropout anchor has no parent hypotheses", 4)
-        if anchor_rows:
-            samples_note = "" if anchor_samples_per_step == 1 else f" samples_per_step={anchor_samples_per_step}"
-            print(
-                f"DPO_ANCHOR rows={len(anchor_rows)} weight={anchor_weight:.8g} target=rejected_text{samples_note}",
-                flush=True,
-            )
+        v2 = uses_v2_gate(config["gate"])
+        try:
+            pairs = prepare_pair_sets(config, torch.cuda.get_device_name() if v2 else None)
+        except (OSError, KeyError, ValueError) as exc:
+            raise RunStop("data_failed", str(exc), 4) from exc
+        train_pair_rows, pref_rows, supplemental = pairs.train, pairs.primary, pairs.supplemental
+        anchor_rows = pairs.anchors
+        anchor_weight = config["dpo"].get("dropout_anchor_weight", 0.0)
+        anchor_samples_per_step = config["dpo"].get("dropout_anchor_samples_per_step", 1)
+        pair_val = pairs.unfiltered_val
         release = load_published_release(resolve_from_repo(args.release_dir))
         if release.get("release_id") != config["model"]["parent_release"]:
             raise RunStop("failed", "release_id does not match the config", 2)
@@ -461,9 +523,9 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 f"DPO parent release source_step {release.get('source_step')} != {config['dpo']['parent']['source_step']}",
                 2,
             )
-        metadata_sha = _check_metadata(resolve_from_repo(Path(config["dpo"]["pair_metadata"])), config, release)
+        metadata_sha = check_input_metadata(resolve_from_repo(Path(config["dpo"]["pair_metadata"])), config, release)
         if args.null_pairs_dir is not None:
-            _check_null_pairs(resolve_from_repo(args.null_pairs_dir), config)
+            check_null_pairs(resolve_from_repo(args.null_pairs_dir), config)
         manifest_sha = {
             "train": sha256_file(train_manifest),
             "val": sha256_file(val_manifest),
@@ -490,6 +552,11 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
 
         model, processor, lora_report = load_sft_model(config)
         load_adapter(model, resolve_from_repo(args.release_dir) / "adapter" / "adapter.safetensors")
+        if v2:
+            expected_dtype = config["lora"].get("trainable_dtype") or "bfloat16"
+            actual_dtypes = {str(p.dtype).removeprefix("torch.") for p in model.parameters() if p.requires_grad}
+            if actual_dtypes != {expected_dtype}:
+                raise RunStop("data_failed", f"policy LoRA precision {actual_dtypes} differs from {expected_dtype}", 4)
         atomic_write_json(run_dir / "trainable_parameters.json", lora_report)
         print(f"DPO_LORA trainable={lora_report['trainable_numel']} total={lora_report['total_numel']}", flush=True)
         eos_token = processor.tokenizer.eos_token
@@ -568,6 +635,69 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             rejected_logp, rejected_count = _sequence_logp(model, rejected_batch, token_mask=token_mask)
             return chosen_logp, rejected_logp, chosen_count, rejected_count
 
+        zero_margins: dict[str, float] = {}
+
+        def score_preferences(pref_rows: list[dict], step: int) -> dict[str, Any]:
+            from train.dpo_contract import length_buckets, pair_dpo_loss, preference_accuracy, raw_policy_preference
+
+            chosen_values: list[float] = []
+            rejected_values: list[float] = []
+            ref_chosen: list[float] = []
+            ref_rejected: list[float] = []
+            deltas_length: list[int] = []
+            scores = []
+            max_abs = 0.0
+            model.train(not v2)
+            for index, row in enumerate(pref_rows, start=1):
+                audio = _load_audio_for_pair(row, audio_root, config)
+                with torch.inference_mode(v2):
+                    _, chosen_value, chosen_count = score_pair_side(row, str(row["chosen_text"]), audio, keep_graph=False)
+                    _, rejected_value, rejected_count = score_pair_side(
+                        row, str(row["rejected_text"]), audio, keep_graph=False
+                    )
+                if chosen_count != int(row["chosen_token_count"]) or rejected_count != int(row["rejected_token_count"]):
+                    raise RunStop("data_failed", f"{row['pair_id']} token count drifted at step {step}", 4)
+                if v2:
+                    if step == 0:
+                        max_abs = max(max_abs, check_step0_score(chosen_value, row["ref_chosen_logp"], row["pair_id"]),
+                                      check_step0_score(rejected_value, row["ref_rejected_logp"], row["pair_id"]))
+                    scores.append({"pair_id": row["pair_id"], "policy_margin": chosen_value - rejected_value,
+                                   "reference_margin": row["ref_chosen_logp"] - row["ref_rejected_logp"]})
+                chosen_values.append(chosen_value)
+                rejected_values.append(rejected_value)
+                ref_chosen.append(float(row["ref_chosen_logp"]))
+                ref_rejected.append(float(row["ref_rejected_logp"]))
+                deltas_length.append(int(row["char_length_delta"]))
+                if index == 1 or index % 250 == 0 or index == len(pref_rows):
+                    print(f"DPO_PREF_PROGRESS step={step} {index}/{len(pref_rows)}", flush=True)
+            _loss, deltas = pair_dpo_loss(chosen_values, rejected_values, ref_chosen, ref_rejected, beta)
+            summary = preference_accuracy(deltas)
+            if v2:
+                cache_accuracy = summary["accuracy"]
+                paired_deltas = [0.0 if step == 0 else s["policy_margin"] - zero_margins[s["pair_id"]] for s in scores]
+                summary = preference_accuracy(paired_deltas)
+                summary["accuracy_vs_reference_cache"] = cache_accuracy
+            summary["raw_policy_accuracy"] = raw_policy_preference(chosen_values, rejected_values)
+            summary["length_buckets"] = length_buckets(deltas_length, chosen_values, rejected_values)
+            summary["mean_loss"] = _loss
+            if v2:
+                summary["pair_margins"] = scores
+                summary["val_cohort_sha256"] = config["dpo"]["val_cohort_sha256"]
+                if step == 0:
+                    summary["max_abs_error"] = max_abs
+            return summary
+
+        def preference_eval(step: int) -> dict[str, Any]:
+            summary = score_preferences(pref_rows, step)
+            if v2:
+                summary["step"] = step
+            if supplemental:
+                summary["supplemental"] = score_preferences(supplemental, step)
+            destination = run_dir / "eval" / step_name(step) / "preference.json"
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_json(destination, summary)
+            return summary
+
         if resume_state is None:
             probe = train_pair_rows[0]
             probe_audio = _load_audio_for_pair(probe, audio_root, config)
@@ -592,26 +722,49 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 raise RunStop("failed", "probe produced no finite LoRA gradient", 2)
             model.zero_grad(set_to_none=True)
             set_seeds(int(config["seed"]))
-            checked = select_recheck(pair_val, int(config["seed"]), 20)
-            max_abs = 0.0
-            model.train()
-            for row in checked:
-                audio = _load_audio_for_pair(row, audio_root, config)
-                for text_key, ref_key, count_key in (
-                    ("chosen_text", "ref_chosen_logp", "chosen_token_count"),
-                    ("rejected_text", "ref_rejected_logp", "rejected_token_count"),
-                ):
-                    _, value, count = score_pair_side(row, str(row[text_key]), audio, keep_graph=False)
-                    if count != int(row[count_key]):
-                        raise RunStop("data_failed", f"{row['pair_id']} token count drifted", 4)
-                    absolute, _relative = logprob_errors(float(row[ref_key]), value)
-                    max_abs = max(max_abs, absolute)
-            print(f"DPO_STEP0 checked={len(checked)} max_abs={max_abs:.8g}", flush=True)
-            log_event(run_dir, "step0_identity", checked=len(checked), max_abs=max_abs)
-            if max_abs > STEP0_ABS_LIMIT:
-                raise RunStop("failed", f"step-0 policy logprob differs from the cache by {max_abs}", 1)
+            if not v2:
+                checked = select_recheck(pair_val, int(config["seed"]), 20)
+                max_abs = 0.0
+                model.train()
+                for row in checked:
+                    audio = _load_audio_for_pair(row, audio_root, config)
+                    for text_key, ref_key, count_key in (
+                        ("chosen_text", "ref_chosen_logp", "chosen_token_count"),
+                        ("rejected_text", "ref_rejected_logp", "rejected_token_count"),
+                    ):
+                        _, value, count = score_pair_side(row, str(row[text_key]), audio, keep_graph=False)
+                        if count != int(row[count_key]):
+                            raise RunStop("data_failed", f"{row['pair_id']} token count drifted", 4)
+                        absolute, _relative = logprob_errors(float(row[ref_key]), value)
+                        max_abs = max(max_abs, absolute)
+                print(f"DPO_STEP0 checked={len(checked)} max_abs={max_abs:.8g}", flush=True)
+                log_event(run_dir, "step0_identity", checked=len(checked), max_abs=max_abs)
+                if max_abs > STEP0_ABS_LIMIT:
+                    raise RunStop("failed", f"step-0 policy logprob differs from the cache by {max_abs}", 1)
             print("DPO_PREFLIGHT_OK", flush=True)
-            log_event(run_dir, "preflight_ok", train_counts=train_counts, val_counts=val_counts)
+            log_event(run_dir, "preflight_ok", train_counts=pairs.train_counts, val_counts=pairs.val_counts)
+
+        zero_evidence = {}
+        if v2:
+            zero_dir = run_dir / "eval" / step_name(0)
+            if resume_state is None:
+                try:
+                    preference_eval(0)
+                except ValueError as exc:
+                    raise RunStop("data_failed", str(exc), 4) from exc
+                evaluate_val(model, processor, val_rows, val_manifest, config, run_dir, 0, release["adapter_sha256"])
+            files = [zero_dir / name for name in ("scored.jsonl", "metrics.json", "preference.json")]
+            if resume_state is not None and not all(f.is_file() for f in files):
+                raise RunStop("resume_rejected", "missing step-0 evidence for this checkpoint", 2)
+            zero_evidence = {f.name: sha256_file(f) for f in files}
+            if resume_state is not None and resume_state.get("step0_sha256") != zero_evidence:
+                raise RunStop("resume_rejected", "restore the matching step-0 evidence with this checkpoint", 2)
+            if resume_state is None:
+                sync_drive_files(args.run_id, [(f, str(f.relative_to(run_dir))) for f in files])
+            zero_pref = json.loads((zero_dir / "preference.json").read_text(encoding="utf-8"))
+            zero_metrics = json.loads((zero_dir / "metrics.json").read_text(encoding="utf-8"))
+            for block in (zero_pref, zero_pref.get("supplemental", {})):
+                zero_margins.update((r["pair_id"], r["policy_margin"]) for r in block.get("pair_margins", []))
 
         optimizer = torch.optim.AdamW(
             [param for param in model.parameters() if param.requires_grad],
@@ -674,6 +827,11 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             print("DPO_RUNTIME_BUDGET disabled", flush=True)
             log_event(run_dir, "runtime_budget_disabled")
 
+        seen_sources = set()
+        if v2 and resume_state is not None:
+            for update in scheduled_updates[:global_step]:
+                seen_sources.update(row["source_utterance_id"] for row in update["rows"])
+
         def budget_exceeded() -> bool:
             if budget_disabled:
                 return False
@@ -720,40 +878,6 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             print("DPO_EXIT 0", flush=True)
             return 0
 
-        def preference_eval(step: int) -> dict[str, Any]:
-            from train.dpo_contract import length_buckets, pair_dpo_loss, preference_accuracy, raw_policy_preference
-
-            chosen_values: list[float] = []
-            rejected_values: list[float] = []
-            ref_chosen: list[float] = []
-            ref_rejected: list[float] = []
-            deltas_length: list[int] = []
-            model.train()
-            for index, row in enumerate(pref_rows, start=1):
-                audio = _load_audio_for_pair(row, audio_root, config)
-                _, chosen_value, chosen_count = score_pair_side(row, str(row["chosen_text"]), audio, keep_graph=False)
-                _, rejected_value, rejected_count = score_pair_side(
-                    row, str(row["rejected_text"]), audio, keep_graph=False
-                )
-                if chosen_count != int(row["chosen_token_count"]) or rejected_count != int(row["rejected_token_count"]):
-                    raise RunStop("data_failed", f"{row['pair_id']} token count drifted at step {step}", 4)
-                chosen_values.append(chosen_value)
-                rejected_values.append(rejected_value)
-                ref_chosen.append(float(row["ref_chosen_logp"]))
-                ref_rejected.append(float(row["ref_rejected_logp"]))
-                deltas_length.append(int(row["char_length_delta"]))
-                if index == 1 or index % 250 == 0 or index == len(pref_rows):
-                    print(f"DPO_PREF_PROGRESS step={step} {index}/{len(pref_rows)}", flush=True)
-            _loss, deltas = pair_dpo_loss(chosen_values, rejected_values, ref_chosen, ref_rejected, beta)
-            summary = preference_accuracy(deltas)
-            summary["raw_policy_accuracy"] = raw_policy_preference(chosen_values, rejected_values)
-            summary["length_buckets"] = length_buckets(deltas_length, chosen_values, rejected_values)
-            summary["mean_loss"] = _loss
-            destination = run_dir / "eval" / step_name(step) / "preference.json"
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_json(destination, summary)
-            return summary
-
         def run_eval(step: int) -> str:
             if budget_exceeded():
                 pause_for_runtime(
@@ -785,16 +909,30 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 config["baseline"],
                 config["gate"],
                 preference,
+                step=step,
+                locate=locate,
+                prior_non_passing_evals=trailing_non_passing_evals(decisions, config["gate"].get("min_stop_step", 0)),
             )
             decision["step"] = step
+            if v2:
+                decision.update(samples_seen=samples_seen, unique_sources_seen=len(seen_sources),
+                                training_pool=pairs.pool_size, training_pairs=len(train_pair_rows))
+                decision["scored_sha256"] = sha256_file(scored_path)
+                decision["preference_sha256"] = sha256_file(scored_path.with_name("preference.json"))
+                decision["adapter_sha256"] = adapter_sha
+                decision["edit_delta_vs_step0"] = {
+                    name: block["edit_count"] - zero_metrics["by_scenario"][name]["edit_count"]
+                    for name, block in metrics["by_scenario"].items()
+                }
             decision.update(locate)
             decisions.append(decision)
             append_jsonl(decision_path, decision)
             sync_drive_files(
                 args.run_id,
                 [
-                    (decision_path, "eval_decisions.jsonl"),
                     (scored_path, f"eval/{step_name(step)}/scored.jsonl"),
+                    (scored_path.with_name("preference.json"), f"eval/{step_name(step)}/preference.json"),
+                    (decision_path, "eval_decisions.jsonl"),
                 ],
             )
             print(
@@ -815,18 +953,19 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                 return "gate_risk"
             return "ok"
 
-        decided_steps = [int(item["step"]) for item in decisions if "step" in item]
-        if resume_state is not None and pending_checkpoint_eval(
-            global_step,
-            int(config["train"]["eval_steps"]),
-            decided_steps,
-            schedule_end_step=schedule_end_step,
-        ):
+        if resume_state is not None:
+            try:
+                stop_reason = resume_gate_action(decisions, global_step, config["train"]["save_steps"],
+                                                 config["train"]["eval_steps"], schedule_end_step=schedule_end_step)
+            except ValueError as exc:
+                raise RunStop("resume_rejected", str(exc), 2) from exc
+        if stop_reason == "evaluate":
             pending_result = run_eval(global_step)
             if pending_result == "paused":
                 return 0
-            if pending_result == "gate_risk":
-                stop_reason = "gate_risk"
+            stop_reason = pending_result
+        if stop_reason in {"ok", "continue"}:
+            stop_reason = "max_steps"
         training_updates = (
             []
             if stop_reason == "gate_risk"
@@ -901,6 +1040,8 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
             optimizer.zero_grad(set_to_none=True)
             global_step = step
             samples_seen += pair_count
+            if v2:
+                seen_sources.update(row["source_utterance_id"] for row in update["rows"])
             loss_value = sum(pair_losses) / pair_count
             append_jsonl(
                 run_dir / "metrics.jsonl",
@@ -950,6 +1091,7 @@ def run_training(args: argparse.Namespace, config: dict[str, Any], resume_state:
                     "global_step": step,
                     "micro_step": samples_seen,
                     "samples_seen": samples_seen,
+                    **({"step0_sha256": zero_evidence} if v2 else {}),
                     "group_visits": 0,
                     "accumulation_boundary": 0,
                     "epoch": int(update["epoch"]),

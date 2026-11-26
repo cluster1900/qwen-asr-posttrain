@@ -19,9 +19,9 @@
 - `test_sft_release.py`：SFT release 只接收选出的 passed step，文本不一致时保持 `staged`。staged release 不能导出 hypotheses，续写必须是 manifest 前缀。不下载模型。
 - `test_build_dpo_pairs.py`：DPO pair 的 chosen/rejected、tie、空输出、超 token、上限内长幻觉、跨 split 泄漏、坏音频和未发布 release。数量不足时退出码 3。不下载模型，不算 logprob。
 - `test_strip_dpo_gap_pairs.py`：dropout 静音段剥离后的新 pair 目录。纯 gap 删除进入 `gap_ties.jsonl`，其他场景保持原文和 token 数。源哈希不符或输出目录名是冻结目录时不写文件。不下载模型，不算 logprob。
-- `test_reference_logprob.py`：reference logprob 是序列和而不是 token 均值。误差线、缓存前缀和复核失败都不发布 pair。不下载模型。
+- `test_reference_logprob.py`：reference logprob 是序列和而不是 token 均值。误差线、缓存前缀和复核失败都不发布 pair。另用 CPU 模拟打分核验增量缓存身份和 Drive 还原。
 - `test_dpo_contract.py`：DPO pair loss、preference 门禁、长度分桶、听音豁免、dropout 静音段剥离、无标点原位替换与单字编辑/参考 margin 过滤、直通式差异 token 梯度掩码、确定性多样本 dropout 锚切片 `dropout_anchor_step_slice`、`optim.scheduler_max_steps` 余弦周期解耦、结束时 Drive 同步、`configs/train/dpo_pilot.yaml`、`configs/train/dpo_dropout_probe.yaml`、`configs/train/dpo_gap_strip_probe.yaml`、`configs/train/dpo_pilot_nondropout.yaml`、`configs/train/dpo_pilot_aligned.yaml`、`configs/train/dpo_pilot_edit1_seq.yaml`、`configs/train/dpo_pilot_edit1_anchor.yaml`、`configs/train/dpo_pilot_edit1_anchor_stop40.yaml`、`configs/train/dpo_pilot_edit1_anchor_step40_h100.yaml` 和 `configs/train/dpo_pilot_edit1_anchor_step40_h100_a4.yaml`。dropout 锚只收 train dropout 的 `rejected_text`，权重超过 0.1 或和整句反传一起用时拒绝。停步配置只把 `max_steps` 改成 40；其他 pilot 写成 40 会被拒绝。不下载模型，不把处置改成已听。trainer 源码不调用 `strip_dropout_gap`。
-- `test_dpo_release.py`：DPO release 只接收选出的 passed pilot step（如 step 40），核对 `preference.json` 与 `scored.jsonl`，拒绝 `risk_stop`、偏好未过线或重复写出；读回文本不一致时保持 `staged`，全部一致时转为 `published` 且不改动 payload hash，同时保留 `audit_disposition: unlistened`。不下载模型。
+- `test_dpo_release.py`：DPO release 只接收选出的 passed pilot step（如 step 40），核对 `preference.json` 与 `scored.jsonl`，拒绝 `risk_stop`、偏好未过线或重复写出；读回文本不一致时保持 `staged`，全部一致时转为 `published` 且不改动 payload hash，同时保留 `audit_disposition: unlistened`。v2 额外覆盖零步和候选证据、20 个编辑门槛及跨零区间。
 - `test_rl_contract.py`：Phase 4 RL（`group_pg_mixed_v1`）确定性候选种子、单候选 reward 与 `[-1, 1]` 截断、G=4 组有效性与截断/错误整组剔除、组均值中心化 advantage、全组同分零损失（含零 KL）、`k3` 逐 token 代理 KL 与固定 step 0 前缀词表条件 `raw_kl`、零信号窗口不更新 optimizer/scheduler、reference 权重 checksum 冻结校验、组内无标点等长替换差异 token 掩码 `aligned_group_mismatch_mask`、仅非零信号 group 累积窗口、`dropout` 父版本假设锚、`configs/train/rl_smoke.yaml`/`rl_pilot.yaml`/`rl_pilot_aligned.yaml` 配置解析以及 `train/rl_release.py` 打包读回校验。不下载模型。
 - `test_phase5_benchmark.py`：Phase 5 封存 `test.jsonl` 四阶段（`base`/`sft`/`dpo`/`rl`）终局评测合同、未发布 release 拒绝、500 条 clean 测试源音频确定性重建 2500 条测试波形并与 `sha256.json` 验签（含跨架构 `noise` 缩放因子 `±8 ULP` 对齐与损坏文件拒绝）、按 `sample_id` 前缀断点续跑、`benchmark_summary.json` / `run_report.md` 汇总与 Drive 读回同步，以及 `notebooks/01_qwen3_asr_post_training_pipeline.ipynb` 主 notebook 结构合同。不下载模型。
 - `test_alimeeting_ood_benchmark.py`：Phase 6 Track 2 AliMeeting Eval 只读 OOD 数据物化与四阶段评测合同测试，覆盖 Praat TextGrid 解析、跨说话人重叠剔除、副语言/拉丁词过滤、近场单声道与远场 8 通道 `ch0` 1:1 配对切片、会议分层确定性抽样、Drive 缓存验签恢复、`trainable=true`/未发布 release/`decode_eval_sha256` 失配拒绝、四阶段 CER + 锁定 `jieba==0.42.1` WER + 配对源簇 Bootstrap 95% CI 汇总及前缀续跑。不下载模型或公开语料。
@@ -31,6 +31,8 @@
 - `test_track3_scale_contracts.py`：Track 3 `profile: scale`（SFT `data.train_scenarios`、DPO/RL 绑定新发布 Track 3 父 release、可选 `runtime.environment_lock_file`、标点匹配 DPO pair 构建与 DPO/RL `allow_matched_punctuation` 字符不变性与标点位点对齐过滤）及历史 `pilot` 语义哈希零漂移合同测试。
 - `test_sharded_decode.py`：多 A100 确定性分片边界划分、跨分片 `sample_id` 严格顺序合并、重复/缺失拦截及基准 JSON schema 单元测试。
 - `test_align_train_punctuation.py`：Track 3B 训练集 Clean 自对齐标点恢复及 SFT `data.target_text_field` 零字符偏差强断言与历史哈希零漂移单元测试。
+- `test_dpo_v2_gate.py` 核验门禁配置、观察窗、耐心、硬停恢复、缺失证据、不可达 checkpoint、学习率曲线及 `scripts/rehearse_dpo_schedule.py` 每步音频数（`ga`）步数/耗时预演。
+- `test_dpo_v2_inputs.py` 用临时合成输入走通建参入口，核验四组样本预算、clean 与锚、固定验证组、缓存身份、零步精度，以及 `--ga`/`--max-steps`/`--rehearse-only` 灵活调参与不足池拒收。
 
 ## 主要输入输出
 

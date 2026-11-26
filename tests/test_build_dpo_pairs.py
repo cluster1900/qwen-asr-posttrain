@@ -102,6 +102,35 @@ class BuildDpoPairsTest(unittest.TestCase):
             **options,
         )
 
+    def test_physical_pairs_keep_successful_clean_controls_even_when_clean_is_correct(self) -> None:
+        clean = _row("train", "clean", "u1")
+        noise = _row("train", "noise", "u1")
+        val = _row("val", "noise", "v1")
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._build(root, [clean, noise],
+                        [dict(_prediction(clean, "你好世界。"), adapter="adapter"),
+                         dict(_prediction(noise, "你号世界"), adapter="adapter")],
+                        [val], [dict(_prediction(val, "你号世界"), adapter="adapter")], require_clean_controls=True)
+            pair = json.loads((root / "pairs/train_pairs.jsonl").read_text())
+            self.assertEqual(pair["clean_prediction_normalized"], "你好世界")
+            self.assertEqual(pair["pair_id"], "u1__noise")
+
+    def test_clean_control_rejects_missing_failed_or_different_parent_predictions(self) -> None:
+        clean = _row("train", "clean", "u1")
+        noise = _row("train", "noise", "u1")
+        val = _row("val", "noise", "v1")
+        for control in (None, {"stop_reason": "length"}, {"prediction_raw": "。"},
+                        {"prediction_raw": "甲甲甲甲"}, {"adapter": "wrong"}):
+            with self.subTest(control=control), TemporaryDirectory() as tmp, self.assertRaises(ValueError):
+                rows = [noise]
+                predictions = [dict(_prediction(noise, "你号世界"), adapter="adapter")]
+                if control is not None:
+                    rows.append(clean)
+                    predictions.append({**_prediction(clean, "你好世界"), "adapter": "adapter", **control})
+                self._build(Path(tmp), rows, predictions, [val], [dict(_prediction(val, "你号世界"), adapter="adapter")],
+                            require_clean_controls=True)
+
     def test_rejected_hypothesis_becomes_a_pair_without_logprobs(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

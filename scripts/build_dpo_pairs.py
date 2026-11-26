@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 from evaluation.eval_cer import join_rows  # noqa: E402
 from evaluation.jsonl_io import read_jsonl, write_jsonl  # noqa: E402
-from evaluation.zh_cer import NORMALIZATION_VERSION, normalize_zh_cer_v1, score_pair  # noqa: E402
+from evaluation.zh_cer import NORMALIZATION_VERSION, is_repeated, normalize_zh_cer_v1, score_pair  # noqa: E402
 
 PAIR_SCHEMA = "qwen3-asr-dpo-pair-v1"
 METADATA_SCHEMA = "qwen3-asr-dpo-pair-metadata-v1"
@@ -323,6 +323,37 @@ def _public_row(row: dict[str, Any]) -> dict[str, Any]:
     return published
 
 
+def training_clean_controls(
+    rows: list[tuple[dict[str, Any], dict[str, Any]]], adapter_sha: str,
+) -> dict[str, str]:
+    """Index successful parent clean decodes, including transcripts equal to gold."""
+    if not isinstance(adapter_sha, str) or not adapter_sha:
+        raise PairBuildError("published release is missing its adapter identity")
+    controls = {}
+    physical_sources = set()
+    for manifest, prediction in rows:
+        source = _require_str(manifest, "source_utterance_id", manifest["sample_id"])
+        if prediction.get("adapter") != adapter_sha:
+            raise PairBuildError(f"{manifest['sample_id']} has a different or missing parent adapter")
+        if manifest["scenario"] in {"noise", "reverb", "far_field"}:
+            physical_sources.add(source)
+        if manifest["scenario"] != "clean":
+            continue
+        text = prediction.get("prediction_raw")
+        if source in controls or prediction.get("error") or not isinstance(text, str) or prediction.get("stop_reason") != "eos":
+            raise PairBuildError(f"{source} has a duplicate or invalid clean prediction")
+        normalized = normalize_zh_cer_v1(text)
+        if not normalized:
+            raise PairBuildError(f"{source} has an empty clean prediction")
+        if is_repeated(normalized) and normalized != normalize_zh_cer_v1(manifest["text"]):
+            raise PairBuildError(f"{source} has a repeated clean prediction")
+        controls[source] = normalized
+    missing = physical_sources - controls.keys()
+    if missing:
+        raise PairBuildError(f"{len(missing)} physical sources missing clean predictions, first: {min(missing)}")
+    return controls
+
+
 def build_dpo_pairs(
     *,
     train_manifest: Path,
@@ -339,6 +370,7 @@ def build_dpo_pairs(
     min_pairs_per_scenario: int = 10,
     audit_per_scenario: int = 20,
     align_punctuation_from_rejected: bool = False,
+    require_clean_controls: bool = False,
 ) -> dict[str, Any]:
     """Write pair files. Raises PairBuildError before any pair file is published."""
     if max_transcript_tokens < 1:
@@ -359,6 +391,10 @@ def build_dpo_pairs(
     except ValueError as exc:
         raise PairBuildError(str(exc)) from exc
     _check_audio_and_leakage(joined, manifest_paths)
+    controls = training_clean_controls(joined["train"], release["adapter_sha256"]) if require_clean_controls else {}
+    if require_clean_controls and sha256_file(val_predictions) != release.get("scored_sha256"):
+        if any(pred.get("adapter") != release["adapter_sha256"] for _, pred in joined["val"]):
+            raise PairBuildError("val predictions must come from the same published SFT adapter")
 
     buckets: dict[str, list[dict[str, Any]]] = {
         "train": [],
@@ -378,6 +414,8 @@ def build_dpo_pairs(
                 align_punctuation_from_rejected=align_punctuation_from_rejected,
             )
             bucket = record["bucket"]
+            if require_clean_controls and split == "train" and record["scenario"] in {"noise", "reverb", "far_field"}:
+                record["clean_prediction_normalized"] = controls[record["source_utterance_id"]]
             if bucket == "pair":
                 buckets[split].append(_public_row(record))
             elif bucket == "rejected":
@@ -457,6 +495,7 @@ def build_dpo_pairs(
                 "audit_per_scenario": audit_per_scenario,
                 "seed": seed,
                 **({"align_punctuation_from_rejected": True} if align_punctuation_from_rejected else {}),
+                **({"require_clean_controls": True} if require_clean_controls else {}),
             },
         }
         (staging / "pair_metadata.json").write_text(
@@ -513,6 +552,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-pairs-per-scenario", type=int, default=10)
     parser.add_argument("--audit-per-scenario", type=int, default=20)
     parser.add_argument("--align-punctuation-from-rejected", action="store_true")
+    parser.add_argument("--require-clean-controls", action="store_true", help="bind every physical training pair to its parent clean prediction")
     return parser.parse_args(argv)
 
 
@@ -553,6 +593,7 @@ def main(argv: list[str] | None = None) -> int:
             min_pairs_per_scenario=args.min_pairs_per_scenario,
             audit_per_scenario=args.audit_per_scenario,
             align_punctuation_from_rejected=bool(args.align_punctuation_from_rejected),
+            require_clean_controls=args.require_clean_controls,
         )
     except PairBuildError as exc:
         _write_failure(args.output_dir, str(exc))

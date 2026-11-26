@@ -6,16 +6,22 @@ import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+from evaluation.jsonl_io import write_jsonl
 from train.reference_logprob import (
+    bind_reference_cache,
     cache_reference_logprobs,
     completed_logprob_rows,
+    copy_reference_cache,
     freeze_reference_model,
     logprobs_match,
+    main as reference_main,
     publish_logprob_pairs,
     reference_sequence_logprob,
     select_recheck,
 )
+from train.sft_schema import load_train_config, sha256_file
 
 
 def _pair(pair_id: str, split: str, chosen: str = "你好", rejected: str = "你号") -> dict[str, object]:
@@ -40,6 +46,36 @@ def _stable_score(row: dict[str, object], text: str) -> tuple[float, int]:
 
 
 class ReferenceLogprobTest(unittest.TestCase):
+    def test_identified_prefix_sync_restore_and_legacy_prefix_isolation(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "local/ref_logprobs.jsonl"
+            drive = root / "drive/ref_logprobs.jsonl"
+            context = {"gpu_name": "fixture", "lora_dtype": "float32", "null_train_pairs_sha256": "one"}
+            self.assertTrue(bind_reference_cache(source, context, strict=True))
+            source.write_bytes(b"first row\n")
+            copy_reference_cache(source, drive, context, bound=True)
+            source.write_bytes(b"first row\nsecond row\n")
+            copy_reference_cache(source, drive, context, bound=True)
+            restored = root / "restored/ref_logprobs.jsonl"
+            copy_reference_cache(drive, restored, context, bound=True)
+            self.assertEqual(restored.read_bytes(), source.read_bytes())
+            self.assertEqual(json.loads(restored.with_suffix(".identity.json").read_text()), context)
+            for key in context:
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, "identity changed"):
+                    copy_reference_cache(drive, restored, {**context, key: "different"}, bound=True)
+            legacy = root / "unlabelled.jsonl"
+            legacy.write_bytes(b"historical prefix\n")
+            self.assertFalse(bind_reference_cache(legacy, context, strict=False))
+            with self.assertRaisesRegex(ValueError, "no precision"):
+                copy_reference_cache(legacy, drive, context, bound=True)
+            with self.assertRaisesRegex(ValueError, "no precision"):
+                copy_reference_cache(drive, legacy, context, bound=True)
+            with self.assertRaisesRegex(ValueError, "unlabelled"):
+                copy_reference_cache(legacy, drive, context, bound=False)
+            self.assertEqual(drive.read_bytes(), source.read_bytes())
+            self.assertFalse(legacy.with_suffix(".identity.json").exists())
+
     def test_logprob_is_the_negative_sum_not_the_mean(self) -> None:
         self.assertEqual(reference_sequence_logprob([0.25, 0.75]), -1.0)
         self.assertNotEqual(reference_sequence_logprob([0.25, 0.75]), -0.5)
@@ -52,6 +88,38 @@ class ReferenceLogprobTest(unittest.TestCase):
         self.assertTrue(logprobs_match(-10.0, -10.00005))
         self.assertFalse(logprobs_match(-10.0, -10.0002))
         self.assertFalse(logprobs_match(-1.0, -1.00005))
+
+    def test_reference_cli_restores_the_identified_drive_prefix(self) -> None:
+        config = Path(__file__).resolve().parents[1] / "configs/train/sft_pilot_lr1e5.yaml"
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            train, val = [_pair("old", "train")], [_pair("new", "val")]
+            write_jsonl(root / "train_pairs.jsonl", train)
+            write_jsonl(root / "val_pairs.jsonl", val)
+            context = {"adapter_sha256": "fixture-parent", "lora_dtype": "float32", "gpu_name": "fixture-GPU",
+                       "decode_eval_sha256": load_train_config(config)["decode_eval_sha256"]}
+            identity = {**context, "null_train_pairs_sha256": sha256_file(root / "train_pairs.jsonl"),
+                        "null_val_pairs_sha256": sha256_file(root / "val_pairs.jsonl")}
+            drive = root / "drive" / "ref_logprobs.jsonl"
+            bind_reference_cache(drive, identity, strict=True)
+            cache_reference_logprobs(train, [], _stable_score, drive, seed=42)
+            calls = []
+            def fake_score(row, text):
+                calls.append(row["pair_id"])
+                return _stable_score(row, text)
+            fake_score.reference_context = context
+            fake_score.release_id = "fixture-SFT"
+            out = root / "local"
+            with patch("train.reference_logprob.build_reference_scorer", return_value=fake_score) as factory:
+                rc = reference_main(["--config", str(config), "--pairs-dir", str(root), "--release-dir", str(root),
+                                     "--audio-root", str(root), "--output-dir", str(out), "--sync-path", str(drive),
+                                     "--seed", "42", "--lora-trainable-dtype", "float32"])
+            self.assertEqual(rc, 0)
+            self.assertEqual(factory.call_args.args[0]["lora"]["trainable_dtype"], "float32")
+            self.assertEqual(calls, ["new", "new", "old", "old", "new", "new"])
+            final = drive.parent / "pairs_logprob"
+            self.assertEqual(json.loads((final / "ref_report.json").read_text())["reference_context"], identity)
+            self.assertEqual((final / "ref_logprobs.identity.json").read_bytes(), drive.with_suffix(".identity.json").read_bytes())
 
     def test_cache_must_be_a_pair_prefix(self) -> None:
         with TemporaryDirectory() as tmp:

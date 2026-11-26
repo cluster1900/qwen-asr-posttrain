@@ -18,7 +18,7 @@ from evaluation.zh_cer import (
     gap_insertion_count,
     normalize_zh_cer_v1,
 )
-from train.sft_contract import degraded_macro_cer, judge_sft_checkpoint
+from train.sft_contract import DEGRADED_SCENARIOS, degraded_macro_cer, judge_sft_checkpoint, pending_checkpoint_eval
 
 GAP_INSERTION_MIN = 30
 EARLY_DELETE_CLEAN_DELTA = 0.005
@@ -145,47 +145,120 @@ def preference_gate_ok(accuracy: float, gate: dict[str, Any]) -> bool:
     return float(accuracy) >= floor and float(accuracy) > 0.5
 
 
+def trailing_non_passing_evals(decisions: list[dict[str, Any]], min_stop_step: int = 0) -> int:
+    """Count consecutive non-passing eval decisions at the tail of the run history."""
+    count = 0
+    for item in reversed(decisions):
+        if item.get("passed") is True or (min_stop_step and item["step"] <= min_stop_step):
+            break
+        count += 1
+    return count
+
+
+def resume_gate_action(decisions: list[dict[str, Any]], step: int, save_steps: int, eval_steps: int, schedule_end_step: int) -> str:
+    """Reconcile the committed eval history with latest.json before another update."""
+    steps = [item.get("step") for item in decisions]
+    if any(type(s) is not int or s <= 0 or s > step for s in steps) or steps != sorted(set(steps)):
+        raise ValueError("eval history is out of order or ahead of the resume checkpoint")
+    if any(s % eval_steps != 0 and s != schedule_end_step for s in steps):
+        raise ValueError("resume history contains an unscheduled eval decision")
+    interval = math.lcm(save_steps, eval_steps)
+    if set(range(interval, step, interval)) - set(steps):
+        raise ValueError("resume is missing prior scheduled eval decisions")
+    for item in decisions:
+        if type(item.get("risk_stop")) is not bool or type(item.get("passed")) is not bool:
+            raise ValueError("incomplete decision in resume history")
+        if item["risk_stop"]:
+            if item["step"] != step:
+                raise ValueError("resume checkpoint is beyond a recorded hard stop")
+            return "gate_risk"
+    if pending_checkpoint_eval(step, eval_steps, steps, schedule_end_step=schedule_end_step):
+        return "evaluate"
+    return "continue"
+
+
 def judge_dpo_checkpoint(
     metrics: dict[str, Any],
     parent_metrics: dict[str, Any],
     base_metrics: dict[str, Any],
     gate: dict[str, Any],
     preference: dict[str, Any],
+    *,
+    step: int | None = None,
+    locate: dict[str, Any] | None = None,
+    prior_non_passing_evals: int = 0,
 ) -> dict[str, Any]:
     """CER against the SFT parent, clean against the base cap, then preference.
 
     ``judge_sft_checkpoint`` compares both clean caps to one baseline. The parent
     check uses the 0.01 cap. The 0.02 cap is applied afterwards against the base.
+    Optional DPO v2 fields (``degraded_macro_scenarios``,
+    ``degraded_macro_stop_increase_max``, ``dropout_cer_increase_max``,
+    ``max_gap_insertions``, ``stop_on_low_preference``, ``min_stop_step``,
+    ``max_consecutive_non_passing_evals``) decouple hard safety stops from soft
+    non-passing evals while preserving legacy behavior 100% when omitted.
     """
     parent_gate = dict(gate)
     parent_gate["clean_cer_increase_vs_base_max"] = 1.0
     parent_view = {"by_scenario": parent_metrics["by_scenario"]}
     parent_decision = judge_sft_checkpoint(metrics, parent_view, parent_gate)
-    risks = list(parent_decision["risks"])
+    macro_scenarios = tuple(gate.get("degraded_macro_scenarios") or DEGRADED_SCENARIOS)
+    hard_risks = list(parent_decision["hard_risks"])
+    soft_risks = list(parent_decision["soft_risks"])
     clean_vs_base = float(metrics["by_scenario"]["clean"]["micro_cer"]) - float(
         base_metrics["by_scenario"]["clean"]["micro_cer"]
     )
     base_cap = float(gate["clean_cer_increase_vs_base_max"])
     if clean_vs_base > base_cap:
-        risks.append(f"clean micro CER increased by {clean_vs_base} against the base cap")
-    accuracy = float(preference["accuracy"])
-    if not preference_gate_ok(accuracy, gate):
-        risks.append(f"preference accuracy {accuracy} is below the DPO gate")
+        hard_risks.append(f"clean micro CER increased by {clean_vs_base} against the base cap")
+    max_gap_ins = gate.get("max_gap_insertions")
+    if max_gap_ins is not None:
+        gap_ins = (locate or {}).get("locate_gap_insertions")
+        if type(gap_ins) is not int or gap_ins < 0:
+            hard_risks.append("missing or invalid locate_gap_insertions")
+        elif gap_ins > int(max_gap_ins):
+            hard_risks.append(
+                f"dropout gap insertions {gap_ins} exceed max_gap_insertions {int(max_gap_ins)}"
+            )
     pair_count = int(preference["pairs"])
     if pair_count < int(gate["min_val_pairs"]):
-        risks.append(f"val pairs {pair_count} are below min_val_pairs")
+        hard_risks.append(f"val pairs {pair_count} are below min_val_pairs")
+    min_stop_step = int(gate.get("min_stop_step") or 0)
+    in_warmup_grace = step is not None and min_stop_step > 0 and int(step) <= min_stop_step
+    stop_on_low_pref = bool(gate.get("stop_on_low_preference", True))
+    accuracy = float(preference["accuracy"])
+    if not preference_gate_ok(accuracy, gate):
+        pref_msg = f"preference accuracy {accuracy} is below the DPO gate"
+        if stop_on_low_pref and not in_warmup_grace:
+            hard_risks.append(pref_msg)
+        else:
+            soft_risks.append(pref_msg)
+    improved = int(parent_decision["improved_degraded_scenarios"])
+    passed = not hard_risks and not soft_risks and improved >= int(gate["min_improved_degraded_scenarios"])
+    consecutive_non_passing = 0 if passed or in_warmup_grace else (int(prior_non_passing_evals) + 1)
+    patience = gate.get("max_consecutive_non_passing_evals")
+    if patience is not None and not in_warmup_grace and consecutive_non_passing >= int(patience):
+        hard_risks.append(
+            f"consecutive non-passing evals {consecutive_non_passing} reached "
+            f"max_consecutive_non_passing_evals {int(patience)}"
+        )
+    risks = hard_risks + soft_risks
     return {
-        "passed": not risks and int(parent_decision["improved_degraded_scenarios"]) >= int(gate["min_improved_degraded_scenarios"]),
-        "risk_stop": bool(risks),
+        "passed": passed,
+        "risk_stop": bool(hard_risks),
         "risks": risks,
-        "improved_degraded_scenarios": int(parent_decision["improved_degraded_scenarios"]),
+        "hard_risks": hard_risks,
+        "soft_risks": soft_risks,
+        "degraded_macro_scenarios": list(macro_scenarios),
+        "consecutive_non_passing_evals": consecutive_non_passing,
+        "improved_degraded_scenarios": improved,
         "clean_cer": float(parent_decision["clean_cer"]),
         "degraded_macro_cer": float(parent_decision["degraded_macro_cer"]),
         "clean_delta_vs_parent": float(parent_decision["clean_delta"]),
         "clean_delta_vs_base": clean_vs_base,
         "degraded_deltas": parent_decision["degraded_deltas"],
         "macro_delta": float(parent_decision["macro_delta"]),
-        "parent_degraded_macro_cer": degraded_macro_cer(parent_metrics["by_scenario"]),
+        "parent_degraded_macro_cer": degraded_macro_cer(parent_metrics["by_scenario"], macro_scenarios),
         "preference_accuracy": accuracy,
         "preference_ties": int(preference["ties"]),
         "raw_policy_accuracy": float(preference["raw_policy_accuracy"]),

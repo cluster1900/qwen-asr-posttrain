@@ -14,6 +14,7 @@ TRAIN_SCHEMA = "qwen3-asr-train-v1"
 PROJECTIONS = ["q_proj", "k_proj", "v_proj", "o_proj"]
 LANGUAGE_TO_OFFICIAL = {"zh": "Chinese"}
 SCENARIOS = ("clean", "dropout", "far_field", "noise", "reverb")
+DEGRADED_SCENARIOS = ("dropout", "far_field", "noise", "reverb")
 
 
 def canonical_json(payload: Any) -> str:
@@ -408,6 +409,13 @@ def load_train_config(path: Path) -> dict[str, Any]:
         "clean_cer_increase_max",
         "clean_cer_increase_vs_base_max",
         "degraded_macro_increase_max",
+        "degraded_macro_scenarios",
+        "degraded_macro_stop_increase_max",
+        "dropout_cer_increase_max",
+        "max_gap_insertions",
+        "stop_on_low_preference",
+        "min_stop_step",
+        "max_consecutive_non_passing_evals",
         "scenario_cer_increase_max",
         "min_improved_degraded_scenarios",
         "empty_rate_max",
@@ -422,7 +430,7 @@ def load_train_config(path: Path) -> dict[str, Any]:
         "reward_drop_stop",
     }
     _reject_unknown(gate, gate_fields, "gate")
-    parsed_gate = {
+    parsed_gate: dict[str, Any] = {
         "min_rows_per_scenario": _as_int(gate.get("min_rows_per_scenario"), "gate.min_rows_per_scenario", minimum=1),
         "clean_cer_increase_max": _as_float(gate.get("clean_cer_increase_max"), "gate.clean_cer_increase_max", minimum=0.0),
         "clean_cer_increase_vs_base_max": _as_float(
@@ -448,6 +456,48 @@ def load_train_config(path: Path) -> dict[str, Any]:
         "raw_kl_max": _as_float(gate.get("raw_kl_max"), "gate.raw_kl_max", minimum=0.0),
         "reward_drop_stop": _as_float(gate.get("reward_drop_stop"), "gate.reward_drop_stop", minimum=0.0),
     }
+    raw_macro_scenarios = gate.get("degraded_macro_scenarios")
+    if raw_macro_scenarios is not None:
+        if not isinstance(raw_macro_scenarios, list) or not raw_macro_scenarios:
+            raise ValueError("gate.degraded_macro_scenarios must be a non-empty list of degraded scenarios")
+        seen_deg: list[str] = []
+        for item in raw_macro_scenarios:
+            name = _as_str(item, "gate.degraded_macro_scenarios[]")
+            if name not in DEGRADED_SCENARIOS or name in seen_deg:
+                raise ValueError(f"invalid or duplicate gate.degraded_macro_scenarios entry: {name}")
+            seen_deg.append(name)
+        if parsed_gate["min_improved_degraded_scenarios"] > len(seen_deg):
+            raise ValueError("gate.min_improved_degraded_scenarios exceeds len(gate.degraded_macro_scenarios)")
+        parsed_gate["degraded_macro_scenarios"] = seen_deg
+    raw_macro_stop = gate.get("degraded_macro_stop_increase_max")
+    if raw_macro_stop is not None:
+        macro_stop = _as_float(raw_macro_stop, "gate.degraded_macro_stop_increase_max")
+        if macro_stop < float(parsed_gate["degraded_macro_increase_max"]):
+            raise ValueError("gate.degraded_macro_stop_increase_max must be >= gate.degraded_macro_increase_max")
+        parsed_gate["degraded_macro_stop_increase_max"] = macro_stop
+    raw_dropout_cap = gate.get("dropout_cer_increase_max")
+    if raw_dropout_cap is not None:
+        parsed_gate["dropout_cer_increase_max"] = _as_float(
+            raw_dropout_cap, "gate.dropout_cer_increase_max", minimum=0.0
+        )
+    raw_max_gap = gate.get("max_gap_insertions")
+    if raw_max_gap is not None:
+        parsed_gate["max_gap_insertions"] = _as_int(raw_max_gap, "gate.max_gap_insertions", minimum=0)
+    raw_stop_low_pref = gate.get("stop_on_low_preference")
+    if raw_stop_low_pref is not None:
+        stop_low_pref = _as_bool(raw_stop_low_pref, "gate.stop_on_low_preference")
+        if stop_low_pref is False:
+            parsed_gate["stop_on_low_preference"] = False
+    raw_min_stop_step = gate.get("min_stop_step")
+    if raw_min_stop_step is not None:
+        min_stop_step = _as_int(raw_min_stop_step, "gate.min_stop_step", minimum=0)
+        if min_stop_step > 0:
+            parsed_gate["min_stop_step"] = min_stop_step
+    raw_patience = gate.get("max_consecutive_non_passing_evals")
+    if raw_patience is not None:
+        parsed_gate["max_consecutive_non_passing_evals"] = _as_int(
+            raw_patience, "gate.max_consecutive_non_passing_evals", minimum=1
+        )
     if raw.get("dpo") is not None or raw.get("rl") is not None:
         raise ValueError("SFT config requires dpo: null and rl: null")
     baseline = _load_baseline(raw.get("baseline"), profile, path)

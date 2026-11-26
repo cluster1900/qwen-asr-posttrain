@@ -1,6 +1,6 @@
 # 测试方案
 
-最后更新：2026-11-24
+最后更新：2026-11-26
 
 ## 背景与范围
 
@@ -30,6 +30,7 @@
 | Phase 6 Track 3 SLR28 物理数据 | 合成多通道实测 RIR、仿真房间 RIR 与点声源/各向同性噪声 zip 夹具 | `python3 -m unittest tests.test_slr28_manifest -v` | 房间家族与噪声录音跨 `train/val/test` 严格零交集；`float64` 卷积与混合两次构建 SHA-256 完全一致；`slr28_split_audit.json` 零泄漏；校验退出码 0；不下载公开语料 | `manifest.json`、`slr28_split_audit.json`、`sha256.json` |
 | 数学期望与 Bootstrap 统计门禁 | 合成配对 `scored.jsonl`（含显著改善、跨零波动、clean 回退与单簇异常） | `python3 -m unittest tests.test_math_expectation -v` | 按 `source_utterance_id` 聚类的 `B=2000` 配对 Bootstrap 可复现；准确计算 $\mathbb{E}[\Delta \text{CER}]$、$\mathbb{E}[\Delta \text{WER}]$、$\mathbb{E}[\Delta R]$、95% CI 与胜率 $P(\Delta < 0)$；精确裁决 `expected_improvement`、`statistically_significant_95` 与 `clean_safe` | `math_expectation.json` |
 | GCP Google Drive 统一同步 | mock Drive API 响应、路径穿越、错误根 ID 与坏 MD5 夹具 | `python3 -m unittest tests.test_gcp_drive_sync -v` | 拒绝非 `qwen3-asr` 根目录 ID 与 `..` 路径；上传后核对远端 `size` 与 `md5Checksum`，不一致即失败；不发起真实网络请求 | `drive_sync_manifest.json` |
+| DPO v2 解耦门禁、步数/每步音频数预演与本地重放 | 历史配置哈希夹具、7 项可选 `gate.*` 字段与边界错误、硬/软风险分离、`min_stop_step` 观察窗、耐心早停、本地 Wave 1 + Phase 3 真实产物重放及多档 `ga` 步数/耗时预演与 YAML 渲染 | `python3 -m unittest tests.test_dpo_v2_gate -v` / `python3 scripts/replay_dpo_gate.py` / `python3 scripts/rehearse_dpo_schedule.py sweep ...` | 历史 SFT/DPO/RL 语义配置哈希零漂移；静音幻觉（`gap_ins=10`）、`dropout` 飙升（`>0.002`）、`clean` 回退与健康度越界在任意步立即硬熔断；warmup 早期低 preference 与软带轻微抖动仅置 `passed=False` 而不误杀；连续未通过达上限后优雅止损；LR Warmup + Cosine 曲线逐点准确；`rehearse_dpo_schedule.py` 精确检测步数偏少/重截断/短尾步/单会话超时，且 `render-config` 灵活切换 `ga` 产出的 YAML 100% 通过 `load_dpo_config`；不下载模型 | 重放报告 JSON / 预演报告 JSON / 生成 YAML |
 | Drive/恢复 | 截断 checkpoint、坏 checksum、runtime 中断 | `python3 scripts/drive_sync.py ...` | `.incoming` 不可恢复；`latest.json` 只指向完整目录；global step 不重复 | sync events、latest |
 
 ## 统一指标与门禁
@@ -153,3 +154,7 @@ python3 scripts/rebuild_phase0_env.py \
 完成一个阶段需要同时满足：测试矩阵中该阶段的所有项目通过；smoke checkpoint 能保存、加载、继续；val gate 写出 `passed`；test 结果、baseline 对比、原始预测和归一化预测已归档；结论写入 `00_progress.md`。失败测试只能把阶段保持为 `in_progress` 或 `blocked`，不能以文档结论替代实际产物。
 
 本方案会约束后续代码的 CLI、日志字段、checkpoint 文件名和指标 schema。它不改变已经发布的权重，也不把当前仓库尚未实现的 runner 误标为可执行；Phase 0 完成前，命令中的 runner 仅是待实现接口。
+
+## DPO v2 离线验收
+
+用 `tests.test_dpo_v2_inputs`、`tests.test_dpo_v2_gate`、`tests.test_reference_logprob`、`tests.test_build_dpo_pairs` 和 `tests.test_dpo_release` 在 CPU 复现三场景缺 clean 对照、缺 dropout 锚、参考精度或内容漂移、训练过滤影响留出组、缺历史回放仍成功、选中硬停后 checkpoint 及断点越过早停。用合成逐条评分验证 20 编辑和置信区间两个独立发布条件。运行全量 unittest 和默认历史回放。Colab 零步验证、训练效果与独立读回在后续训练实验中记录。

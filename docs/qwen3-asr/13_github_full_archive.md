@@ -65,6 +65,7 @@
 
 - 链接：`https://github.com/cluster1900/qwen-asr-posttrain/releases/tag/archive-runs-track3-full-v1`
 - 说明：`runs_track3_base_and_sft.tar.gz` 合并后完整 SHA-256 为 `cafdb1a30773d5b810098c56e815c01035c6660de3cd3ef89f16183166c58731`。
+- 2026-11-26 按归档清单核对，RL 第二轮 10 组中只有 `20261125T052009_rl_06b_zh_seed42` 的逐步文件进入 `runs_track3_rl.tar.gz`。十组发布判定均可在运行机的末次监控记录中核对。[第二轮逐组实测值](14_dpo_rl_diagnosis.md#第二轮监控读数)
 
 | 资产文件名 | 字节数 | SHA-256 |
 | --- | ---: | --- |

@@ -13,8 +13,11 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import sys
+import tempfile
 import traceback
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
@@ -23,7 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evaluation.jsonl_io import read_jsonl, write_jsonl  # noqa: E402
-from train.sft_checkpoint import sha256_file  # noqa: E402
+from train.sft_checkpoint import atomic_write_json, sha256_file  # noqa: E402
 
 CACHE_SCHEMA = "qwen3-asr-dpo-ref-logprob-v1"
 REPORT_SCHEMA = "qwen3-asr-dpo-ref-report-v1"
@@ -340,6 +343,9 @@ def build_reference_scorer(config: dict[str, Any], release_dir: Path, audio_root
     release = load_published_release(release_dir)
     model, processor, _report = load_sft_model(config)
     load_adapter(model, release_dir / "adapter" / "adapter.safetensors")
+    dtypes = {str(p.dtype).removeprefix("torch.") for p in model.parameters() if p.requires_grad}
+    if len(dtypes) != 1:
+        raise RefLogprobError(f"expected one LoRA dtype, got {dtypes}")
     freeze_reference_model(model)
     prefix = prefix_text(processor, config["decode"]["eval"]["context"], config["official_language"])
     eos_token = processor.tokenizer.eos_token
@@ -348,20 +354,18 @@ def build_reference_scorer(config: dict[str, Any], release_dir: Path, audio_root
         raise RefLogprobError("tokenizer did not provide an EOS token")
     device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
-    audio_cache: dict[str, Any] = {}
+    # Chosen and rejected share audio. Keep memory bounded on the expanded corpus.
+    cached_audio = lru_cache(maxsize=1)(load_audio)
 
     def score(row: dict[str, Any], text: str) -> tuple[float, int]:
         audio_value = str(row["audio"])
         audio_path = Path(audio_value)
         if not audio_path.is_absolute():
             audio_path = audio_root / audio_value
-        key = str(audio_path)
-        if key not in audio_cache:
-            audio_cache[key] = load_audio(audio_path)
         example = collate_example(
             processor,
             {"sample_id": row["pair_id"], "text": text},
-            audio_cache[key],
+            cached_audio(audio_path),
             prefix=prefix,
             eos_token=eos_token,
             eos_id=int(eos_id),
@@ -375,18 +379,52 @@ def build_reference_scorer(config: dict[str, Any], release_dir: Path, audio_root
         return reference_sequence_logprob([float(nll_sum.detach().float().item())]), int(count)
 
     score.release_id = release["release_id"]  # type: ignore[attr-defined]
+    score.reference_context = {  # type: ignore[attr-defined]
+        "adapter_sha256": release["adapter_sha256"],
+        "lora_dtype": dtypes.pop(),
+        "gpu_name": torch.cuda.get_device_name(device),
+        "decode_eval_sha256": config["decode_eval_sha256"],
+    }
     return score
 
 
-def _copy_cache(cache_path: Path, sync_path: Path) -> None:
-    import shutil
+def bind_reference_cache(cache: Path, context: dict[str, Any], *, strict: bool) -> bool:
+    identity = cache.with_suffix(".identity.json")
+    if identity.exists():
+        if json.loads(identity.read_text(encoding="utf-8")) != context:
+            raise RefLogprobError("reference cache identity changed; use a fresh output directory")
+    elif cache.is_file() and cache.stat().st_size:
+        if strict:
+            raise RefLogprobError("partial reference cache has no precision or input identity")
+        return False  # Legacy unlabelled caches must stay unlabelled.
+    else:
+        atomic_write_json(identity, context)
+    return True
 
-    sync_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(cache_path, sync_path)
-    if sha256_file(cache_path) != sha256_file(sync_path):
-        print(f"REF_LOGP_SYNC_FAIL {sync_path}", flush=True)
+
+def _copy_cache(cache_path: Path, sync_path: Path) -> None:
+    if cache_path.resolve() == sync_path.resolve():
         return
+    sync_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=sync_path.parent, delete=False) as handle:
+        staging = Path(handle.name)
+    try:
+        shutil.copyfile(cache_path, staging)
+        if sha256_file(cache_path) != sha256_file(staging):
+            raise RefLogprobError(f"reference sync hash mismatch for {sync_path}")
+        staging.replace(sync_path)
+    finally:
+        staging.unlink(missing_ok=True)
     print(f"REF_LOGP_SYNC {sync_path.name}", flush=True)
+
+
+def copy_reference_cache(source: Path, destination: Path, context: dict, *, bound: bool) -> None:
+    if bound:
+        bind_reference_cache(source, context, strict=True)
+        bind_reference_cache(destination, context, strict=True)
+    elif destination.with_suffix(".identity.json").exists():
+        raise RefLogprobError("cannot overwrite an identified cache with unlabelled scores")
+    _copy_cache(source, destination)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -399,6 +437,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--sync-path", type=Path)
     parser.add_argument("--recheck-limit", type=int, default=20)
+    parser.add_argument("--lora-trainable-dtype", choices=("float32", "bfloat16"))
     return parser.parse_args(argv)
 
 
@@ -408,6 +447,8 @@ def main(argv: list[str] | None = None) -> int:
         from train.sft_schema import load_train_config
 
         config = load_train_config(args.config)
+        if args.lora_trainable_dtype:
+            config["lora"]["trainable_dtype"] = args.lora_trainable_dtype
         if int(config["seed"]) != args.seed:
             raise RefLogprobError(f"seed {args.seed} does not match the config")
         if config["runtime"]["deterministic_algorithms"]:
@@ -420,6 +461,16 @@ def main(argv: list[str] | None = None) -> int:
         if (output_dir / "train_pairs.jsonl").exists():
             raise RefLogprobError("filled train pairs already exist")
         scorer = build_reference_scorer(config, args.release_dir, args.audio_root)
+        context = {
+            **scorer.reference_context,
+            "null_train_pairs_sha256": sha256_file(args.pairs_dir / "train_pairs.jsonl"),
+            "null_val_pairs_sha256": sha256_file(args.pairs_dir / "val_pairs.jsonl"),
+        }
+        strict = bool(config["lora"].get("trainable_dtype"))
+        if (strict and args.sync_path is not None and args.sync_path.is_file()
+                and args.sync_path.stat().st_size and not (cache_path.exists() and cache_path.stat().st_size)):
+            copy_reference_cache(args.sync_path, cache_path, context, bound=True)
+        bound = bind_reference_cache(cache_path, context, strict=strict)
 
         def on_progress(done: int, total: int) -> None:
             print(f"REF_LOGP_PROGRESS {done}/{total}", flush=True)
@@ -428,7 +479,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.sync_path is None:
                 return
             try:
-                _copy_cache(cache_path, args.sync_path)
+                copy_reference_cache(cache_path, args.sync_path, context, bound=bound)
             except OSError as exc:
                 print(f"REF_LOGP_SYNC_FAIL {exc}", flush=True)
 
@@ -444,16 +495,17 @@ def main(argv: list[str] | None = None) -> int:
             sync_fn=sync_fn,
         )
         report["release_id"] = getattr(scorer, "release_id", None)
+        if bound:
+            report["reference_context"] = context
         report = publish_logprob_pairs(train_pairs, val_pairs, cache_path, output_dir, report)
         if args.sync_path is not None:
             final_dir = args.sync_path.parent / "pairs_logprob"
             final_dir.mkdir(parents=True, exist_ok=True)
-            for name in ("train_pairs.jsonl", "val_pairs.jsonl", "ref_logprobs.jsonl", "ref_report.json"):
+            copy_reference_cache(cache_path, final_dir / cache_path.name, context, bound=bound)
+            for name in ("train_pairs.jsonl", "val_pairs.jsonl", "ref_report.json"):
                 source = output_dir / name
                 target = final_dir / name
                 _copy_cache(source, target)
-                if sha256_file(source) != sha256_file(target):
-                    raise RefLogprobError(f"final sync hash mismatch for {name}")
         print(
             "REF_LOGP_DONE "
             f"train={report['train_pairs']} val={report['val_pairs']} "

@@ -6,6 +6,9 @@
 
 ## 当前文件清单
 
+- `experiments/dpo_v2_sweep.yaml`：两个训练池（默认 `min_train_pairs=8000` 与 `256` 对小池）、两档 LR 的共用配方（默认 `ga=16, max_steps=500, warmup_steps=50, eval_steps=100, min_stop_step=100`），供 `scripts/prepare_dpo_v2_sweep.py` 读取并支持 `--ga`/`--max-steps` 灵活预演调整。
+- `train/dpo_track3b_val_cohorts.json`：固定 160 对主验证和 82 对补充验证的 ID、文本身份哈希及历史文件来源。
+
 - `README.md`：本说明文档。
 - `inference/base_eval.yaml`：Phase 0 greedy 评测配置，schema `qwen3-asr-infer-v1`，seed 42，`wer_tokenizer` 为 null。
 - `inference/base_eval_wer.yaml`：锁定 `jieba==0.42.1` 及内置 `dict.txt` SHA-256（`7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8`、`wer_hmm: false`）的 greedy 评测配置，schema `qwen3-asr-infer-v1`，与 `base_eval.yaml` 共享同一 `model` 与 `decode_eval_sha256`（`4a4fee2b67884438faa196909749fcc8dcc6126b175554ad19992bf9b4f2f642`），用于输出中文 WER 辅助指标。
