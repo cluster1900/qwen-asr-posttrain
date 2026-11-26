@@ -4,6 +4,11 @@
 
 > **整理说明**：为保持 Git `main` 分支轻量，编译产物 `book/dist/` 与静态站 `book/_site/` 已加入 `.gitignore`，正式成品统一归档发布在 GitHub Release **`book-v1.0.0`**（附 SHA-256 校验清单），并由 `.github/workflows/book-pages.yml` 直接从该 Release 拉取 HTML 成品发布至 GitHub Pages。
 
+## 🌐 在线阅读（GitHub Pages）
+
+- **在线阅读地址**：https://cluster1900.github.io/qwen-asr-posttrain/
+- **版本溯源 JSON**：https://cluster1900.github.io/qwen-asr-posttrain/release.json
+
 ## GitHub Release 正式发布版（`book-v1.0.0`）
 
 - Release 页面：`https://github.com/cluster1900/qwen-asr-posttrain/releases/tag/book-v1.0.0`
