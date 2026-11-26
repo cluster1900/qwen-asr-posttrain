@@ -87,7 +87,19 @@
 | `archive-logs-and-local-results-v1_SHA256SUMS.txt` | `111` | `f4422a22ace8a0249333fac83a61391527666bf41048ed8d5abfa65b3ab6163b` |
 | `archive-logs-and-local-results-v1_FILE_MANIFEST.json` | `49,663` | `b464d82c57627a9f3f55ecd8c9ef779ebf586ccac4d9dcac44f82845f01cc37d` |
 
-### 6. 标准恢复命令示例
+### 6. `book-v1.0.0`（书籍成品 Release：4 资产，11.45 MiB，HTML / PDF / EPUB3）
+
+- 链接：`https://github.com/cluster1900/qwen-asr-posttrain/releases/tag/book-v1.0.0`
+- 说明：《从零到一：大模型底层原理、GPU 算子优化与任意模型后训练实战》三格式成品；配套 GitHub Pages 工作流 `.github/workflows/book-pages.yml` 与 `book/scripts/build_pages.py` 直接从该 Release 拉取并校验 HTML 成品部署在线阅读站。
+
+| 资产文件名 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| `zero-to-one-llm-posttraining-v1.0.0.html` | `679,810` | `b73031d419cefcc52e6a3a132051ebb1be9f91f862225774c93b161c72ad2df8` |
+| `zero-to-one-llm-posttraining-v1.0.0.pdf` | `10,442,936` | `b9f2a38d3f367e334e33a33e053efef2eaf46fbc9a5bdd7686e3ef1502d99814` |
+| `zero-to-one-llm-posttraining-v1.0.0.epub` | `885,215` | `30734bed7553825d9a9ff44d4582491ab8b79aeaa97f846ccd8dd928d403b80f` |
+| `book-v1.0.0_SHA256SUMS.txt` | `320` | `1e79f0fdba5a1f04b51a8b620e7c20fc1b1043905c292c60e17af5a4a3282ef9` |
+
+### 7. 标准恢复命令示例
 
 ```bash
 # 下载指定 Release 全量资产并核对校验和

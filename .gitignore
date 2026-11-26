@@ -24,6 +24,8 @@ runs/
 results/
 wandb/
 tensorboard/
+book/dist/
+book/_site/
 
 # Checkpoints and model weights
 ckpt/

@@ -138,6 +138,51 @@ body {
   margin-bottom: 12px;
 }
 
+.release-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.release-box-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: var(--heading);
+}
+.release-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.release-links {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.release-links a {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.release-links a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .book-sidebar nav ul {
   list-style: none;
   padding-left: 0;

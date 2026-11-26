@@ -42,6 +42,9 @@ BOOK_TITLE = "从零到一：大模型底层原理、GPU 算子优化与任意�
 BOOK_SUBTITLE = "PyTorch 内核 · GPU 与 Roofline · 核心算子 · 显存精算 · 逐层解剖 · SFT/DPO/RL 全闭环"
 BOOK_AUTHOR = "Qwen3-ASR Post-Training Engineering Team"
 OUTPUT_BASENAME = "从零到一大模型底层与后训练实战"
+RELEASE_REPO = "cluster1900/qwen-asr-posttrain"
+RELEASE_TAG = "book-v1.0.0"
+RELEASE_SLUG = "zero-to-one-llm-posttraining-v1.0.0"
 
 
 def preprocess_markdown(raw_md: str) -> str:
@@ -208,6 +211,10 @@ def build_interactive_html(toc_html: str, body_html: str, out_html: Path) -> Non
   }, { passive: true });
 })();
 """
+    release_base = f"https://github.com/{RELEASE_REPO}/releases"
+    pdf_url = f"{release_base}/download/{RELEASE_TAG}/{RELEASE_SLUG}.pdf"
+    epub_url = f"{release_base}/download/{RELEASE_TAG}/{RELEASE_SLUG}.epub"
+    rel_url = f"{release_base}/tag/{RELEASE_TAG}"
     page = f"""<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
@@ -228,12 +235,23 @@ def build_interactive_html(toc_html: str, body_html: str, out_html: Path) -> Non
         <button onclick="bumpFont(-1)" title="缩小字号">A-</button>
         <button onclick="bumpFont(1)" title="放大字号">A+</button>
       </div>
+      <div class="release-box">
+        <div class="release-box-head">
+          <span>📦 Release 下载</span>
+          <span class="release-tag">{html_lib.escape(RELEASE_TAG)}</span>
+        </div>
+        <div class="release-links">
+          <a href="{pdf_url}" target="_blank" rel="noopener">📄 PDF 版</a>
+          <a href="{epub_url}" target="_blank" rel="noopener">📱 EPUB3</a>
+          <a href="{rel_url}" target="_blank" rel="noopener">🏷️ Release</a>
+        </div>
+      </div>
       <input id="toc-search" type="search" placeholder="搜索章节标题..." />
       <nav aria-label="目录">{toc_html}</nav>
     </aside>
     <main class="book-main">
       <header class="book-hero">
-        <div class="badge">第一版（修订精校版）· HTML / PDF / EPUB 全格式同步</div>
+        <div class="badge">Release {html_lib.escape(RELEASE_TAG)}（修订精校版）· HTML / PDF / EPUB3 全格式同步</div>
         <h1 class="hero-title">{html_lib.escape(BOOK_TITLE)}</h1>
         <p class="hero-sub">{html_lib.escape(BOOK_SUBTITLE)}</p>
         <div class="hero-meta">作者：{html_lib.escape(BOOK_AUTHOR)} · 18 张原创高清原理图 · 精准核验 Qwen3-ASR-0.6B 全部 782,426,112 参数</div>
